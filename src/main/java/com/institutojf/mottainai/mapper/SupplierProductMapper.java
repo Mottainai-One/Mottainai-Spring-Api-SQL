@@ -4,6 +4,9 @@ import com.institutojf.mottainai.dto.response.SupplierProductResponse;
 import com.institutojf.mottainai.model.SupplierProduct;
 import org.springframework.stereotype.Component;
 
+/**
+ * Transforma a relação entre fornecedor e produto no formato de resposta da API
+ */
 @Component
 public class SupplierProductMapper {
 

@@ -4,6 +4,9 @@ import com.institutojf.mottainai.dto.response.ProductCategoryResponse;
 import com.institutojf.mottainai.model.ProductCategory;
 import org.springframework.stereotype.Component;
 
+/**
+ * Transforma uma categoria no formato de resposta da API
+ */
 @Component
 public class ProductCategoryMapper {
 

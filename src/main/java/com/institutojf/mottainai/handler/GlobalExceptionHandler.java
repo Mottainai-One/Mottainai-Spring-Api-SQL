@@ -18,10 +18,13 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 
+/**
+ * Organiza os erros da API retornando respostas fáceis de entender
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Database connection exception
+    // Erro de conexão com o banco
     @ExceptionHandler(SQLException.class)
     public ResponseEntity<ApiError> handleSqlException(SQLException exception) {
         var error = new ApiError(
@@ -34,7 +37,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
     }
 
-    // Database constraint violation
+    // Dados duplicados ou relacionados de forma inválida
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrityViolationException(DataIntegrityViolationException exception) {
         var error = new ApiError(
@@ -47,7 +50,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
-    // Generic database access exception
+    // Outro erro ao acessar o banco
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ApiError> handleDataAccessException(DataAccessException exception) {
         var error = new ApiError(
@@ -60,7 +63,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 
-    // Resource not found exception
+    // Item não encontrado
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleResourceNotFoundException(ResourceNotFoundException exception) {
         var error = new ApiError(
@@ -73,7 +76,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
-    // Conflict exception raised by a business rule
+    // Dados que entram em conflito com outro cadastro
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiError> handleConflictException(ConflictException exception) {
         var error = new ApiError(
@@ -86,7 +89,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
-    // Business rule exception
+    // Ação não permitida pelas regras do sistema
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiError> handleBusinessException(BusinessException exception) {
         var error = new ApiError(
@@ -99,7 +102,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    // Request body validation exception
+    // Lista os campos preenchidos de forma inválida
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleMethodArgumentNotValidException(MethodArgumentNotValidException exception) {
         var error = new ApiError(
@@ -115,7 +118,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    // Invalid path variable or query parameter type
+    // Parâmetro enviado no formato errado
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiError> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException exception) {
         var error = new ApiError(
@@ -128,6 +131,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    // Dados enviados no formato errado
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception) {
         var error = new ApiError(
@@ -140,6 +144,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(error);
     }
 
+    // Endereço da API não encontrado
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiError> handleNoResourceFoundException(NoResourceFoundException exception) {
         var error = new ApiError(
@@ -152,6 +157,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
+    // Login inválido sem informar se o email existe
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> handleAuthenticationException(AuthenticationException exception) {
         var error = new ApiError(
@@ -164,7 +170,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
-    // Generic runtime exception
+    // Erro inesperado durante a execução
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiError> handleRuntimeException(RuntimeException exception) {
         var error = new ApiError(
@@ -177,7 +183,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 
-    // Generic fallback
+    // Captura qualquer exceção restante
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleException(Exception exception) {
         var error = new ApiError(

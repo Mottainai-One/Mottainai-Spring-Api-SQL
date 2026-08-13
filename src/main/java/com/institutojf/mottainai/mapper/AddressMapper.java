@@ -4,6 +4,9 @@ import com.institutojf.mottainai.dto.response.AddressResponse;
 import com.institutojf.mottainai.model.Address;
 import org.springframework.stereotype.Component;
 
+/**
+ * Transforma um endereço no formato de resposta da API
+ */
 @Component
 public class AddressMapper {
 

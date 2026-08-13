@@ -13,6 +13,9 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
      * Busca um produto disponível para uso operacional pelo identificador.
      * Produtos inativos ou excluídos logicamente não são retornados.
      */
+    /**
+     * Busca um produto ativo pelo ID.
+     */
     Optional<Product> findByIdAndActiveTrueAndDeletedAtIsNull(Integer id);
 
     Optional<Product> findByIdAndDeletedAtIsNull(Integer id);
