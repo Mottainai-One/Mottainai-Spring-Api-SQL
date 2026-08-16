@@ -23,7 +23,7 @@ public class JwtService {
         this.jwtProperties = jwtProperties;
     }
 
-    public String generateToken(Authentication authentication) {
+    public String generateToken(Authentication authentication, Integer tokenVersion) {
         Instant issuedAt = Instant.now();
         Instant expiresAt = issuedAt.plus(jwtProperties.expirationMinutes(), ChronoUnit.MINUTES);
         List<String> roles = authentication.getAuthorities().stream()
@@ -36,6 +36,8 @@ public class JwtService {
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .claim("roles", roles)
+                // Permite invalidar tokens antigos quando a senha muda
+                .claim("tokenVersion", tokenVersion)
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).type("JWT").build();
 
