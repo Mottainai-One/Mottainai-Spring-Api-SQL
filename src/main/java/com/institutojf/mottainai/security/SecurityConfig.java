@@ -1,5 +1,7 @@
 package com.institutojf.mottainai.security;
 
+import com.institutojf.mottainai.model.AppUser;
+import com.institutojf.mottainai.repository.AppUserRepository;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -16,9 +18,15 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -35,9 +43,11 @@ import java.util.Base64;
 public class SecurityConfig {
 
     private final JwtProperties jwtProperties;
+    private final AppUserRepository appUserRepository;
 
-    public SecurityConfig(JwtProperties jwtProperties) {
+    public SecurityConfig(JwtProperties jwtProperties, AppUserRepository appUserRepository) {
         this.jwtProperties = jwtProperties;
+        this.appUserRepository = appUserRepository;
     }
 
     @Bean
@@ -46,7 +56,15 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/v1/auth/login", "/api-docs/**", "/swagger-ui.html", "/swagger-ui/**", "/actuator/health").permitAll()
+                        .requestMatchers(
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/reset-password",
+                                "/api-docs/**",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/actuator/health"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/**").hasAnyRole("ADMIN", "MANAGER")
@@ -82,7 +100,10 @@ public class SecurityConfig {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtSecretKey())
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
-        decoder.setJwtValidator(org.springframework.security.oauth2.jwt.JwtValidators.createDefaultWithIssuer(jwtProperties.issuer()));
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer(jwtProperties.issuer()),
+                tokenVersionValidator()
+        ));
         return decoder;
     }
 
@@ -94,6 +115,26 @@ public class SecurityConfig {
         JwtAuthenticationConverter authenticationConverter = new JwtAuthenticationConverter();
         authenticationConverter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
         return authenticationConverter;
+    }
+
+    /**
+     * Compara a versão do JWT com a versão atual do usuário
+     * Quando a senha muda, tokens antigos deixam de funcionar
+     */
+    private OAuth2TokenValidator<Jwt> tokenVersionValidator() {
+        return jwt -> appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(jwt.getSubject())
+                .filter(user -> hasCurrentTokenVersion(user, jwt))
+                .map(user -> OAuth2TokenValidatorResult.success())
+                .orElseGet(() -> OAuth2TokenValidatorResult.failure(
+                        new OAuth2Error("invalid_token", "Token is no longer valid", null)
+                ));
+    }
+
+    private boolean hasCurrentTokenVersion(AppUser user, Jwt jwt) {
+        Object tokenVersion = jwt.getClaim("tokenVersion");
+        return tokenVersion instanceof Number version
+                && user.getTokenVersion() != null
+                && user.getTokenVersion() == version.intValue();
     }
 
     private SecretKey jwtSecretKey() {
