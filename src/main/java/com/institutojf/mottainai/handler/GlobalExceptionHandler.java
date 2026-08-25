@@ -1,6 +1,7 @@
 package com.institutojf.mottainai.handler;
 
 import com.institutojf.mottainai.exception.BusinessException;
+import com.institutojf.mottainai.exception.CepNotFoundException;
 import com.institutojf.mottainai.exception.ConflictException;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import org.springframework.dao.DataAccessException;
@@ -66,6 +67,19 @@ public class GlobalExceptionHandler {
     // Item não encontrado
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleResourceNotFoundException(ResourceNotFoundException exception) {
+        var error = new ApiError(
+                LocalDateTime.now(),
+                404,
+                "NOT_FOUND",
+                exception.getMessage(),
+                null
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    // CEP não existe na base dos Correios
+    @ExceptionHandler(CepNotFoundException.class)
+    public ResponseEntity<ApiError> handleCepNotFoundException(CepNotFoundException exception) {
         var error = new ApiError(
                 LocalDateTime.now(),
                 404,
