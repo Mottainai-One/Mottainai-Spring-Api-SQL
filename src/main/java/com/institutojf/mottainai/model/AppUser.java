@@ -38,6 +38,9 @@ public class AppUser {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
+    @Column(name = "token_version", nullable = false)
+    private Integer tokenVersion = 0;
+
     @Column(nullable = false)
     private Boolean active;
 
