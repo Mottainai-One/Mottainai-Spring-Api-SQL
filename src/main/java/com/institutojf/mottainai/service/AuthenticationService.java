@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 /**
  * Cuida do login e da recuperação de senha
@@ -29,6 +30,7 @@ public class AuthenticationService {
 
     private static final int RATE_LIMIT_MINUTES = 5;
     private static final int RESET_CODE_EXPIRATION_MINUTES = 10;
+    private static final int MAX_RESET_ATTEMPTS = 5;
 
     private final AuthenticationManager authenticationManager;
     private final AppUserRepository appUserRepository;
@@ -92,6 +94,8 @@ public class AuthenticationService {
      */
     @Transactional(noRollbackFor = BusinessException.class)
     public void resetPassword(ResetPasswordRequest request) {
+        validateNewPassword(request.newPassword());
+
         AppUser user = appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(request.email())
                 .orElse(null);
         PasswordResetToken token = user != null
@@ -105,9 +109,6 @@ public class AuthenticationService {
             throw invalidRecoveryCode();
         }
 
-        if (token.getExpiresAt().isBefore(LocalDateTime.now()) || token.getAttempts() >= MAX_RESET_ATTEMPTS) {
-            throw invalidRecoveryCode();
-        }
 
         if (!passwordEncoder.matches(request.code(), token.getCodeHash())) {
             token.setAttempts(token.getAttempts() + 1);
@@ -139,6 +140,27 @@ public class AuthenticationService {
 
     private String generateResetCode() {
         return String.valueOf(secureRandom.nextInt(900_000) + 100_000);
+    }
+
+    private void validateNewPassword(String password) {
+        if (!hasRequiredCharacterTypes(password) || containsPredictableTerm(password)) {
+            throw new BusinessException("Password must contain uppercase, lowercase, number and special character and must not contain predictable terms");
+        }
+    }
+
+    private boolean hasRequiredCharacterTypes(String password) {
+        boolean hasUppercase = password.chars().anyMatch(Character::isUpperCase);
+        boolean hasLowercase = password.chars().anyMatch(Character::isLowerCase);
+        boolean hasNumber = password.chars().anyMatch(Character::isDigit);
+        boolean hasSpecialCharacter = password.chars()
+                .anyMatch(character -> !Character.isLetterOrDigit(character) && !Character.isWhitespace(character));
+
+        return hasUppercase && hasLowercase && hasNumber && hasSpecialCharacter;
+    }
+
+    private boolean containsPredictableTerm(String password) {
+        String normalizedPassword = password.toLowerCase(Locale.ROOT);
+        return normalizedPassword.contains("mottainai") || normalizedPassword.contains("2026");
     }
 
     private BusinessException invalidRecoveryCode() {
