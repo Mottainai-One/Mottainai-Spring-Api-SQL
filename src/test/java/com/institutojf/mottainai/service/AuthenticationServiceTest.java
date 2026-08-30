@@ -120,9 +120,10 @@ class AuthenticationServiceTest {
         AppUser user = user("user@mottainai.com");
         user.setTokenVersion(0);
         PasswordResetToken token = activeToken(user);
-        ResetPasswordRequest request = new ResetPasswordRequest(user.getEmail(), "123456", "new-password");
+        ResetPasswordRequest request = new ResetPasswordRequest(user.getEmail(), "123456", "New-Password@42");
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(user.getEmail())).thenReturn(Optional.of(user));
         when(passwordResetTokenRepository.findFirstByUserIdAndUsedAtIsNullOrderByCreatedAtDesc(user.getId())).thenReturn(Optional.of(token));
+        when(passwordEncoder.encode("dummy")).thenReturn("dummy-hash");
         when(passwordEncoder.matches(request.code(), token.getCodeHash())).thenReturn(true);
         when(passwordEncoder.encode(request.newPassword())).thenReturn("new-password-hash");
 
@@ -140,7 +141,7 @@ class AuthenticationServiceTest {
     void shouldCountInvalidRecoveryCodeAttempts() {
         AppUser user = user("user@mottainai.com");
         PasswordResetToken token = activeToken(user);
-        ResetPasswordRequest request = new ResetPasswordRequest(user.getEmail(), "000000", "new-password");
+        ResetPasswordRequest request = new ResetPasswordRequest(user.getEmail(), "000000", "New-Password@42");
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(user.getEmail())).thenReturn(Optional.of(user));
         when(passwordResetTokenRepository.findFirstByUserIdAndUsedAtIsNullOrderByCreatedAtDesc(user.getId())).thenReturn(Optional.of(token));
         when(passwordEncoder.matches(request.code(), token.getCodeHash())).thenReturn(false);
@@ -158,14 +159,27 @@ class AuthenticationServiceTest {
         AppUser user = user("user@mottainai.com");
         PasswordResetToken token = activeToken(user);
         token.setExpiresAt(LocalDateTime.now().minusMinutes(1));
-        ResetPasswordRequest request = new ResetPasswordRequest(user.getEmail(), "123456", "new-password");
+        ResetPasswordRequest request = new ResetPasswordRequest(user.getEmail(), "123456", "New-Password@42");
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(user.getEmail())).thenReturn(Optional.of(user));
         when(passwordResetTokenRepository.findFirstByUserIdAndUsedAtIsNullOrderByCreatedAtDesc(user.getId())).thenReturn(Optional.of(token));
 
+        when(passwordEncoder.encode("dummy")).thenReturn("dummy-hash");
+
         assertThrows(BusinessException.class, () -> authenticationService.resetPassword(request));
 
-        verify(passwordEncoder, never()).matches(any(), any());
+        verify(passwordEncoder).matches(request.code(), "dummy-hash");
         verify(appUserRepository, never()).save(user);
+    }
+
+    @Test
+    @DisplayName("Should reject predictable password before accessing the recovery token")
+    void shouldRejectPredictablePasswordBeforeAccessingTheRecoveryToken() {
+        ResetPasswordRequest request = new ResetPasswordRequest("user@mottainai.com", "123456", "Mottainai@2026");
+
+        assertThrows(BusinessException.class, () -> authenticationService.resetPassword(request));
+
+        verify(appUserRepository, never()).findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(any());
+        verify(passwordResetTokenRepository, never()).findFirstByUserIdAndUsedAtIsNullOrderByCreatedAtDesc(any());
     }
 
     private AppUser user(String email) {

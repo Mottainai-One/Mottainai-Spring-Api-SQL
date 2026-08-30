@@ -56,7 +56,7 @@ class AuthenticationControllerTest {
                                 {
                                   "email": "user@mottainai.com",
                                   "code": "123456",
-                                  "newPassword": "new-password"
+                                  "newPassword": "New-Password@42"
                                 }
                                 """))
                 .andExpect(status().isNoContent());

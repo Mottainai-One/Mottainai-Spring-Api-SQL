@@ -35,6 +35,10 @@ spring:
     create-schemas: true
     locations: classpath:db/migration
 
+  cache:
+      caffeine:
+        spec: maximumSize=500,expireAfterWrite=10m
+
 security:
   jwt:
     secret: ${JWT_SECRET}
