@@ -25,12 +25,7 @@ public class SupplierService {
     private final SupplierProductRepository supplierProductRepository;
     private final SupplierMapper supplierMapper;
 
-    public SupplierService(
-            SupplierRepository supplierRepository,
-            AddressRepository addressRepository,
-            SupplierProductRepository supplierProductRepository,
-            SupplierMapper supplierMapper
-    ) {
+    public SupplierService(SupplierRepository supplierRepository, AddressRepository addressRepository, SupplierProductRepository supplierProductRepository, SupplierMapper supplierMapper) {
         this.supplierRepository = supplierRepository;
         this.addressRepository = addressRepository;
         this.supplierProductRepository = supplierProductRepository;
