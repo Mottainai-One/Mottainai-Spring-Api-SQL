@@ -18,6 +18,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 /**
  * Organiza os erros da API retornando respostas fáceis de entender
@@ -29,7 +30,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SQLException.class)
     public ResponseEntity<ApiError> handleSqlException(SQLException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 503,
                 "SERVICE_UNAVAILABLE",
                 "Database service is temporarily unavailable",
@@ -42,7 +43,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrityViolationException(DataIntegrityViolationException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 409,
                 "CONFLICT",
                 "The operation violates an existing data constraint",
@@ -55,7 +56,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ApiError> handleDataAccessException(DataAccessException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 500,
                 "INTERNAL_SERVER_ERROR",
                 "Unable to process the request due to a database error",
@@ -68,7 +69,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleResourceNotFoundException(ResourceNotFoundException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 404,
                 "NOT_FOUND",
                 exception.getMessage(),
@@ -81,7 +82,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CepNotFoundException.class)
     public ResponseEntity<ApiError> handleCepNotFoundException(CepNotFoundException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 404,
                 "NOT_FOUND",
                 exception.getMessage(),
@@ -94,7 +95,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiError> handleConflictException(ConflictException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 409,
                 "CONFLICT",
                 exception.getMessage(),
@@ -107,7 +108,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiError> handleBusinessException(BusinessException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 400,
                 "BAD_REQUEST",
                 exception.getMessage(),
@@ -120,7 +121,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleMethodArgumentNotValidException(MethodArgumentNotValidException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 400,
                 "BAD_REQUEST",
                 "One or more fields are invalid",
@@ -136,7 +137,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiError> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 400,
                 "BAD_REQUEST",
                 "Invalid value for parameter: " + exception.getName(),
@@ -149,7 +150,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 400,
                 "BAD_REQUEST",
                 "Malformed request body",
@@ -162,7 +163,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiError> handleNoResourceFoundException(NoResourceFoundException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 404,
                 "NOT_FOUND",
                 "Resource not found",
@@ -175,7 +176,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> handleAuthenticationException(AuthenticationException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 401,
                 "UNAUTHORIZED",
                 "Invalid email or password",
@@ -184,11 +185,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
+    // Argumento inválido enviado para uma regra de negócio
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> handleIllegalArgumentException(IllegalArgumentException exception) {
+        var error = new ApiError(LocalDateTime.now(ZoneOffset.UTC), 400, "BAD_REQUEST", exception.getMessage(), null);
+        return ResponseEntity.badRequest().body(error);
+    }
+
     // Erro inesperado durante a execução
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiError> handleRuntimeException(RuntimeException exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 500,
                 "INTERNAL_SERVER_ERROR",
                 "An unexpected internal error occurred",
@@ -201,7 +209,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleException(Exception exception) {
         var error = new ApiError(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 500,
                 "INTERNAL_SERVER_ERROR",
                 "An unexpected internal error occurred",

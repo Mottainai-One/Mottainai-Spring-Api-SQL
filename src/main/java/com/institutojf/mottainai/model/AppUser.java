@@ -35,6 +35,9 @@ public class AppUser {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
+    @Column(name = "firebase_uid", length = 255, unique = true)
+    private String firebaseUid;
+
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
