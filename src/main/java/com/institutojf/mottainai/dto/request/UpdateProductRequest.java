@@ -4,12 +4,16 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
 public record UpdateProductRequest(
         @NotNull Integer categoryId,
+        @NotNull Integer taxProfileId,
+        @NotBlank @Pattern(regexp = "\\d{8}") String ncm,
+        @Pattern(regexp = "\\d{7}") String cest,
         @NotBlank @Size(max = 150) String name,
         String description,
         @Size(max = 100) String brand,

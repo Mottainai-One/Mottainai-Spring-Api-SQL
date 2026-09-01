@@ -37,8 +37,21 @@ public class Product {
     @JoinColumn(name = "category_id", nullable = false)
     private ProductCategory category;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tax_profile_id", nullable = false)
+    private TaxProfile taxProfile;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String sku;
+
     @Column(nullable = false, unique = true, length = 30)
     private String barcode;
+
+    @Column(nullable = false, length = 8)
+    private String ncm;
+
+    @Column(length = 7)
+    private String cest;
 
     @Column(nullable = false, length = 150)
     private String name;
