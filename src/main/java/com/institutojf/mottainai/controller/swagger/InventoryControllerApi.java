@@ -109,11 +109,7 @@ public interface InventoryControllerApi {
                     content = @Content(schema = @Schema(implementation = InventoryResponse.class))
             )
     })
-    ResponseEntity<List<InventoryResponse>> findByBarcode(
-            String barcode,
-            Integer storeId,
-            Authentication authentication
-    );
+    ResponseEntity<List<InventoryResponse>> findByBarcode(String barcode, Integer storeId, Authentication authentication);
 
     @Operation(summary = "Find inventory entries expiring within a period")
     @ApiResponses({
@@ -163,9 +159,5 @@ public interface InventoryControllerApi {
                     content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
-    ResponseEntity<InventoryMovementResponse> createMovement(
-            Integer id,
-            CreateInventoryMovementRequest request,
-            Authentication authentication
-    );
+    ResponseEntity<InventoryMovementResponse> createMovement(Integer id, CreateInventoryMovementRequest request, Authentication authentication);
 }
