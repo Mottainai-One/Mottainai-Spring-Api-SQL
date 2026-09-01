@@ -58,7 +58,7 @@ class ApiSecurityTest {
         mockMvc.perform(post("/api/v1/products")
                         .with(user("operator@mottainai.com").roles("OPERATOR"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"categoryId\":1,\"barcode\":\"7891234567890\",\"name\":\"Rice\",\"unitMeasure\":\"KG\"}"))
+                        .content(productRequest()))
                 .andExpect(status().isForbidden());
 
         verify(productService, never()).create(any());
@@ -68,15 +68,21 @@ class ApiSecurityTest {
     @DisplayName("Should allow write operation for manager")
     void shouldAllowWriteOperationForManager() throws Exception {
         when(productService.create(any())).thenReturn(new ProductResponse(
-                1, 1, "Food", "7891234567890", "Rice", null, null, "KG", BigDecimal.ONE, true, 1
+                1, 1, "Food", 1, "RIC-001", "7891234567890", "12345678", null, "Rice", null, null, "KG", BigDecimal.ONE, true, 1
         ));
 
         mockMvc.perform(post("/api/v1/products")
                         .with(user("manager@mottainai.com").roles("MANAGER"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"categoryId\":1,\"barcode\":\"7891234567890\",\"name\":\"Rice\",\"unitMeasure\":\"KG\"}"))
+                        .content(productRequest()))
                 .andExpect(status().isCreated());
 
         verify(productService).create(any());
+    }
+
+    private String productRequest() {
+        return """
+                {"categoryId":1,"taxProfileId":1,"barcode":"7891234567890","ncm":"12345678","name":"Rice","unitMeasure":"KG"}
+                """;
     }
 }

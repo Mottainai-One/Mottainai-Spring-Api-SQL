@@ -11,6 +11,7 @@ import com.institutojf.mottainai.repository.AppUserRepository;
 import com.institutojf.mottainai.repository.PasswordResetTokenRepository;
 import com.institutojf.mottainai.security.JwtProperties;
 import com.institutojf.mottainai.security.JwtService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -20,11 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Locale;
 
-/**
- * Cuida do login e da recuperação de senha
- */
 @Service
 public class AuthenticationService {
 
@@ -41,15 +41,12 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public AuthenticationService(
-            AuthenticationManager authenticationManager,
-            AppUserRepository appUserRepository,
-            PasswordResetTokenRepository passwordResetTokenRepository,
-            PasswordResetEmailService passwordResetEmailService,
-            JwtService jwtService,
-            JwtProperties jwtProperties,
-            PasswordEncoder passwordEncoder
-    ) {
+    @Value("${security.password.predictable-terms:mottainai,2026}")
+    private String predictableTermsConfig = "mottainai,2026";
+
+    public AuthenticationService(AuthenticationManager authenticationManager, AppUserRepository appUserRepository,
+                                 PasswordResetTokenRepository passwordResetTokenRepository, PasswordResetEmailService passwordResetEmailService,
+                                 JwtService jwtService, JwtProperties jwtProperties, PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
         this.appUserRepository = appUserRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
@@ -66,7 +63,7 @@ public class AuthenticationService {
         );
         AppUser user = appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(authentication.getName())
                 .orElseThrow();
-        user.setLastLogin(LocalDateTime.now());
+        user.setLastLogin(LocalDateTime.now(ZoneOffset.UTC));
         appUserRepository.save(user);
 
         return new TokenResponse(
@@ -104,11 +101,10 @@ public class AuthenticationService {
 
         // Sempre executa BCrypt para ter tempo constante
         String dummyHash = passwordEncoder.encode("dummy");
-        if (token == null || token.getExpiresAt().isBefore(LocalDateTime.now()) || token.getAttempts() >= MAX_RESET_ATTEMPTS) {
+        if (token == null || token.getExpiresAt().isBefore(LocalDateTime.now(ZoneOffset.UTC)) || token.getAttempts() >= MAX_RESET_ATTEMPTS) {
             passwordEncoder.matches(request.code(), dummyHash);
             throw invalidRecoveryCode();
         }
-
 
         if (!passwordEncoder.matches(request.code(), token.getCodeHash())) {
             token.setAttempts(token.getAttempts() + 1);
@@ -118,7 +114,7 @@ public class AuthenticationService {
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         user.setTokenVersion(user.getTokenVersion() + 1);
-        token.setUsedAt(LocalDateTime.now());
+        token.setUsedAt(LocalDateTime.now(ZoneOffset.UTC));
         appUserRepository.save(user);
         passwordResetTokenRepository.save(token);
     }
@@ -130,9 +126,9 @@ public class AuthenticationService {
         PasswordResetToken token = new PasswordResetToken();
         token.setUser(user);
         token.setCodeHash(passwordEncoder.encode(code));
-        token.setExpiresAt(LocalDateTime.now().plusMinutes(RESET_CODE_EXPIRATION_MINUTES));
+        token.setExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(RESET_CODE_EXPIRATION_MINUTES));
         token.setAttempts(0);
-        token.setCreatedAt(LocalDateTime.now());
+        token.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
         passwordResetTokenRepository.save(token);
 
         passwordResetEmailService.sendRecoveryCode(user.getEmail(), code);
@@ -143,6 +139,9 @@ public class AuthenticationService {
     }
 
     private void validateNewPassword(String password) {
+        if (password == null || password.length() < 8) {
+            throw new BusinessException("Password must be at least 8 characters long");
+        }
         if (!hasRequiredCharacterTypes(password) || containsPredictableTerm(password)) {
             throw new BusinessException("Password must contain uppercase, lowercase, number and special character and must not contain predictable terms");
         }
@@ -160,7 +159,10 @@ public class AuthenticationService {
 
     private boolean containsPredictableTerm(String password) {
         String normalizedPassword = password.toLowerCase(Locale.ROOT);
-        return normalizedPassword.contains("mottainai") || normalizedPassword.contains("2026");
+        return Arrays.stream(predictableTermsConfig.split(","))
+                .map(String::trim)
+                .filter(term -> !term.isEmpty())
+                .anyMatch(normalizedPassword::contains);
     }
 
     private BusinessException invalidRecoveryCode() {
@@ -170,7 +172,7 @@ public class AuthenticationService {
     private boolean hasRecentResetRequest(AppUser user) {
         return passwordResetTokenRepository
                 .findFirstByUserIdAndUsedAtIsNullOrderByCreatedAtDesc(user.getId())
-                .map(token -> token.getCreatedAt().plusMinutes(RATE_LIMIT_MINUTES).isAfter(LocalDateTime.now()))
+                .map(token -> token.getCreatedAt().plusMinutes(RATE_LIMIT_MINUTES).isAfter(LocalDateTime.now(ZoneOffset.UTC)))
                 .orElse(false);
     }
 
