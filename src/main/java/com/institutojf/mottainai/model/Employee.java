@@ -26,11 +26,30 @@ public class Employee {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "store_id", nullable = false)
+    private RetailStore store;
+
+    @Column(nullable = false, length = 150)
+    private String name;
+
+    @Column(nullable = false, unique = true, length = 11)
+    private String cpf;
+
+    @Column(length = 150)
+    private String email;
+
+    @Column(length = 20)
+    private String phone;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "role_id", nullable = false)
     private EmployeeRole role;
 
     @Column(nullable = false)
     private Boolean active;
+
+    @Column(name = "hire_date", nullable = false)
+    private java.time.LocalDate hireDate;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
