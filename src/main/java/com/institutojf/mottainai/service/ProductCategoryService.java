@@ -22,11 +22,7 @@ public class ProductCategoryService {
     private final ProductRepository productRepository;
     private final ProductCategoryMapper categoryMapper;
 
-    public ProductCategoryService(
-            ProductCategoryRepository categoryRepository,
-            ProductRepository productRepository,
-            ProductCategoryMapper categoryMapper
-    ) {
+    public ProductCategoryService(ProductCategoryRepository categoryRepository, ProductRepository productRepository, ProductCategoryMapper categoryMapper) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
         this.categoryMapper = categoryMapper;

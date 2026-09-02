@@ -87,6 +87,17 @@ class ProductControllerTest {
     }
 
     @Test
+    @DisplayName("Should reject product with invalid CEST format")
+    void shouldRejectProductWithInvalidCestFormat() throws Exception {
+        mockMvc.perform(post("/api/v1/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"categoryId\":1,\"taxProfileId\":1,\"barcode\":\"7891234567890\",\"ncm\":\"12345678\",\"cest\":\"123456\",\"name\":\"Rice\",\"unitMeasure\":\"KG\"}"))
+                .andExpect(status().isBadRequest());
+
+        verify(productService, never()).create(any());
+    }
+
+    @Test
     @DisplayName("Should find product by barcode")
     void shouldFindProductByBarcode() throws Exception {
         when(productService.findByBarcode("7891234567890")).thenReturn(response());
@@ -108,10 +119,10 @@ class ProductControllerTest {
     }
 
     private CreateProductRequest request() {
-        return new CreateProductRequest(1, "7891234567890", "Rice", null, null, "KG", BigDecimal.ONE);
+        return new CreateProductRequest(1, 1, "7891234567890", "12345678", null, "Rice", null, null, "KG", BigDecimal.ONE);
     }
 
     private ProductResponse response() {
-        return new ProductResponse(1, 1, "Food", "7891234567890", "Rice", null, null, "KG", BigDecimal.ONE, true, 1);
+        return new ProductResponse(1, 1, "Food", 1, "RIC-001", "7891234567890", "12345678", null, "Rice", null, null, "KG", BigDecimal.ONE, true, 1);
     }
 }
