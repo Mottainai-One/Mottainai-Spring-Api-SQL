@@ -21,4 +21,5 @@ public interface AppUserRepository extends JpaRepository<AppUser, Integer> {
 
     @EntityGraph(attributePaths = {"employee", "employee.store", "employee.role"})
     List<AppUser> findAllByDeletedAtIsNull();
+
 }
