@@ -18,11 +18,6 @@ public interface SupplierRepository extends JpaRepository<Supplier, Integer> {
     Optional<Supplier> findByIdAndDeletedAtIsNull(Integer id);
 
     /**
-     * Busca um fornecedor disponível para uso operacional pelo CNPJ.
-     */
-    Optional<Supplier> findByCnpjAndActiveTrueAndDeletedAtIsNull(String cnpj);
-
-    /**
      * Lista apenas fornecedores disponíveis para uso operacional, de forma paginada.
      */
     Page<Supplier> findAllByActiveTrueAndDeletedAtIsNull(Pageable pageable);
