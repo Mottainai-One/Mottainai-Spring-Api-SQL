@@ -6,6 +6,7 @@ import com.institutojf.mottainai.exception.ConflictException;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -47,6 +48,18 @@ public class GlobalExceptionHandler {
                 409,
                 "CONFLICT",
                 "The operation violates an existing data constraint",
+                null
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiError> handleOptimisticLockingFailureException(OptimisticLockingFailureException exception) {
+        var error = new ApiError(
+                LocalDateTime.now(ZoneOffset.UTC),
+                409,
+                "CONFLICT",
+                "The resource was updated by another request; reload it and retry",
                 null
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);

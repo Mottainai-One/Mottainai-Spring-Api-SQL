@@ -106,7 +106,7 @@ class ProductServiceTest {
         when(productRepository.save(product)).thenReturn(product);
 
         productService.update(1, new UpdateProductRequest(
-                1, 1, "12345678", null, "Brown rice", "Whole grain", "Mottainai", "KG", new BigDecimal("1.25"), true
+                1, 1, "12345678", null, "Brown rice", "Whole grain", "Mottainai", "KG", new BigDecimal("1.25"), true, 1
         ));
 
         assertEquals("12345678", product.getNcm());
