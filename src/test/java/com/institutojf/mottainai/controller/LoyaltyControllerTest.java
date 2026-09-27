@@ -57,9 +57,9 @@ class LoyaltyControllerTest {
         RedeemRewardRequest request = new RedeemRewardRequest(3);
         when(customerAccess.currentCustomer(authentication)).thenReturn(customer);
 
-        controller.redeemReward(request, authentication);
+        controller.redeemReward(request, authentication, "test-redemption-key");
 
-        verify(loyaltyService).redeemReward(5, request);
+        verify(loyaltyService).redeemReward(5, request, "test-redemption-key");
     }
 
     private Customer customer(Integer id) {
