@@ -1,5 +1,7 @@
 package com.institutojf.mottainai.dto.response;
 
+import java.math.BigDecimal;
+
 public record RetailStoreResponse(
         Integer id,
         CompanyResponse company,
@@ -8,8 +10,8 @@ public record RetailStoreResponse(
         String cnpj,
         String email,
         String phone,
-        java.math.BigDecimal latitude,
-        java.math.BigDecimal longitude,
+        BigDecimal latitude,
+        BigDecimal longitude,
         Boolean active
 ) {
 }
