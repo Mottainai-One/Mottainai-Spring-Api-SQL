@@ -4,6 +4,7 @@ import com.institutojf.mottainai.dto.request.ForgotPasswordRequest;
 import com.institutojf.mottainai.dto.request.LoginRequest;
 import com.institutojf.mottainai.dto.request.ResetPasswordRequest;
 import com.institutojf.mottainai.dto.response.TokenResponse;
+import com.institutojf.mottainai.dto.response.UserResponse;
 import com.institutojf.mottainai.handler.ApiError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,9 +13,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 
 @Tag(name = "Authentication", description = "API for authentication and password recovery")
 public interface AuthenticationControllerApi {
+
+    @Operation(summary = "Get the authenticated employee profile")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Employee profile found", content = @Content(schema = @Schema(implementation = UserResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Authentication required", content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    ResponseEntity<UserResponse> profile(Authentication authentication);
 
     @Operation(summary = "Authenticate a user")
     @ApiResponses({
