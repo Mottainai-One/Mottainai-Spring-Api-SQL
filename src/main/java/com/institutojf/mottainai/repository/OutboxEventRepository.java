@@ -1,12 +1,12 @@
 package com.institutojf.mottainai.repository;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Map;
 import java.util.Optional;
@@ -15,11 +15,11 @@ import java.util.Optional;
 public class OutboxEventRepository {
 
     private final JdbcTemplate jdbcTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
-    public OutboxEventRepository(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
+    public OutboxEventRepository(JdbcTemplate jdbcTemplate, JsonMapper jsonMapper) {
         this.jdbcTemplate = jdbcTemplate;
-        this.objectMapper = objectMapper;
+        this.jsonMapper = jsonMapper;
     }
 
     public void lockIdempotencyKey(String idempotencyKey) {
@@ -58,10 +58,10 @@ public class OutboxEventRepository {
             return false;
         }
         try {
-            JsonNode eventData = objectMapper.readTree(event.eventData());
+            JsonNode eventData = jsonMapper.readTree(event.eventData());
             return eventData.path("customer_id").asInt(Integer.MIN_VALUE) == customerId
                     && eventData.path("reward_id").asInt(Integer.MIN_VALUE) == rewardId;
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new IllegalStateException("Stored outbox event contains invalid JSON", exception);
         }
     }
@@ -70,13 +70,13 @@ public class OutboxEventRepository {
                                          Integer pointsSpent, String idempotencyKey) {
         String eventData;
         try {
-            eventData = objectMapper.writeValueAsString(Map.of(
+            eventData = jsonMapper.writeValueAsString(Map.of(
                     "redemption_id", redemptionId,
                     "customer_id", customerId,
                     "reward_id", rewardId,
                     "points_spent", pointsSpent
             ));
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new IllegalStateException("Could not serialize loyalty redemption event", exception);
         }
 
