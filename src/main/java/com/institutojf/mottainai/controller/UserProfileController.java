@@ -69,7 +69,7 @@ public class UserProfileController implements UserProfileControllerApi {
     @Override
     @PatchMapping("/store-users/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<UserResponse> update(@PathVariable Integer id, @Valid @RequestBody UpdateStoreUserRequest request) {
-        return ResponseEntity.ok(userProfileService.update(id, request));
+    public ResponseEntity<UserResponse> update(@PathVariable Integer id, @Valid @RequestBody UpdateStoreUserRequest request, Authentication authentication) {
+        return ResponseEntity.ok(userProfileService.update(id, request, authentication.getName()));
     }
 }
