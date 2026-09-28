@@ -12,6 +12,7 @@ public interface AppUserRepository extends JpaRepository<AppUser, Integer> {
     /**
      * Busca usuários que podem fazer login, ou seja, que estão ativos e não foram deletados
      */
+    @EntityGraph(attributePaths = {"employee", "employee.role"})
     Optional<AppUser> findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(String email);
 
     boolean existsByEmailIgnoreCaseAndDeletedAtIsNull(String email);
