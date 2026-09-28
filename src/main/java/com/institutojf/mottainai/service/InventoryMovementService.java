@@ -26,12 +26,7 @@ public class InventoryMovementService {
     private final InventoryMovementMapper inventoryMovementMapper;
     private final InventoryAccess inventoryAccess;
 
-    public InventoryMovementService(
-            InventoryRepository inventoryRepository,
-            InventoryMovementRepository inventoryMovementRepository,
-            InventoryMovementMapper inventoryMovementMapper,
-            InventoryAccess inventoryAccess
-    ) {
+    public InventoryMovementService(InventoryRepository inventoryRepository, InventoryMovementRepository inventoryMovementRepository, InventoryMovementMapper inventoryMovementMapper, InventoryAccess inventoryAccess) {
         this.inventoryRepository = inventoryRepository;
         this.inventoryMovementRepository = inventoryMovementRepository;
         this.inventoryMovementMapper = inventoryMovementMapper;
@@ -39,8 +34,7 @@ public class InventoryMovementService {
     }
 
     @Transactional
-    public InventoryMovementResponse create(Integer inventoryId, CreateInventoryMovementRequest request,
-                                            Authentication authentication) {
+    public InventoryMovementResponse create(Integer inventoryId, CreateInventoryMovementRequest request, Authentication authentication) {
         Inventory inventory = inventoryRepository.findActiveByIdForUpdate(inventoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
         inventoryAccess.checkStoreAccess(authentication, inventory.getStore().getId());
@@ -69,14 +63,32 @@ public class InventoryMovementService {
     }
 
     @Transactional(readOnly = true)
-    public List<InventoryMovementResponse> findByInventory(Integer inventoryId, Authentication authentication) {
+    public List<InventoryMovementResponse> findByInventory(Integer inventoryId, LocalDateTime from, LocalDateTime to, Authentication authentication) {
+        validateDateRange(from, to);
         Inventory inventory = inventoryRepository.findByIdAndActiveTrueAndDeletedAtIsNull(inventoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
         inventoryAccess.checkStoreAccess(authentication, inventory.getStore().getId());
-        return inventoryMovementRepository.findAllByInventory_IdOrderByMovementDateDesc(inventoryId)
+        return inventoryMovementRepository.findAllByInventory_IdAndMovementDateBetweenOrderByMovementDateDesc(inventoryId, from, to)
                 .stream()
                 .map(inventoryMovementMapper::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<InventoryMovementResponse> findByStore(Integer requestedStoreId, LocalDateTime from, LocalDateTime to, Authentication authentication) {
+        validateDateRange(from, to);
+        Integer storeId = inventoryAccess.resolveStoreId(authentication, requestedStoreId);
+        return inventoryMovementRepository.findAllByStoreIdAndMovementDateBetweenOrderByMovementDateDesc(
+                        storeId, from, to)
+                .stream()
+                .map(inventoryMovementMapper::toResponse)
+                .toList();
+    }
+
+    private void validateDateRange(LocalDateTime from, LocalDateTime to) {
+        if (from == null || to == null || to.isBefore(from) || to.isAfter(from.plusMonths(6))) {
+            throw new BusinessException("A valid movement date range of at most six months is required");
+        }
     }
 
     private void validateDirection(MovementType type, BigDecimal quantity) {
