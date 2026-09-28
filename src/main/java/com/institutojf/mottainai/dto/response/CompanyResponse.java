@@ -1,5 +1,7 @@
 package com.institutojf.mottainai.dto.response;
 
+import java.math.BigDecimal;
+
 public record CompanyResponse(
         Integer id,
         SubscriptionPlanResponse plan,
@@ -8,8 +10,8 @@ public record CompanyResponse(
         String cnpj,
         String email,
         String phone,
-        java.math.BigDecimal latitude,
-        java.math.BigDecimal longitude,
+        BigDecimal latitude,
+        BigDecimal longitude,
         Boolean active
 ) {
 }
