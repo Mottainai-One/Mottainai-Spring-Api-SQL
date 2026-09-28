@@ -9,6 +9,8 @@ import java.util.List;
 
 public interface SystemRuleRepository extends JpaRepository<SystemRule, Integer> {
 
+    List<SystemRule> findAllByOrderByCategoryAscKeyAsc();
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<SystemRule> findAllByKey(String key);
 }

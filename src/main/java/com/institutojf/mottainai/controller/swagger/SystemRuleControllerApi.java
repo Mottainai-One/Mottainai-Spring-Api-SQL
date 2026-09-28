@@ -13,8 +13,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
+import java.util.List;
+
 @Tag(name = "System rules", description = "Global application rules")
 public interface SystemRuleControllerApi {
+
+    @Operation(summary = "List all global and category-specific system rules")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "System rules listed", content = @Content(schema = @Schema(implementation = SystemRuleResponse.class)))
+    })
+    ResponseEntity<List<SystemRuleResponse>> findAll();
 
     @Operation(summary = "Update a system rule and record the change in the audit log")
     @ApiResponses({

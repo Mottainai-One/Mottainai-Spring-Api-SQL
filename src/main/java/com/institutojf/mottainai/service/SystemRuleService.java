@@ -2,6 +2,7 @@ package com.institutojf.mottainai.service;
 
 import com.institutojf.mottainai.dto.request.UpdateSystemRuleRequest;
 import com.institutojf.mottainai.dto.response.SystemRuleResponse;
+import com.institutojf.mottainai.exception.BusinessException;
 import com.institutojf.mottainai.exception.ConflictException;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import com.institutojf.mottainai.model.AppUser;
@@ -33,6 +34,13 @@ public class SystemRuleService {
         this.appUserRepository = appUserRepository;
         this.auditLogRepository = auditLogRepository;
         this.jsonMapper = jsonMapper;
+    }
+
+    @Transactional(readOnly = true)
+    public List<SystemRuleResponse> findAll() {
+        return systemRuleRepository.findAllByOrderByCategoryAscKeyAsc().stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional
