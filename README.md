@@ -13,6 +13,9 @@ API REST do Mottainai para gestão de catálogo, fornecedores, empresas, lojas, 
 DB_URL=jdbc:postgresql://localhost:5432/mottainai
 DB_USER=seu_usuario
 DB_PASSWORD=sua_senha
+DB_APP_ROLE=role_da_aplicacao
+DB_MIGRATION_USER=role_de_migracao
+DB_MIGRATION_PASSWORD=senha_do_role_de_migracao
 JWT_SECRET=<segredo-Base64-com-pelo-menos-32-bytes>
 CORS_ALLOWED_ORIGINS=http://localhost:3000
 FIREBASE_PROJECT_ID=seu-projeto-firebase
@@ -22,15 +25,19 @@ FIREBASE_PROJECT_ID=seu-projeto-firebase
 
 ## Banco de dados
 
-A aplicação executa as migrations em `src/main/resources/db/migration` e valida o mapeamento JPA (`spring.jpa.hibernate.ddl-auto=validate`).
+A aplicação valida o mapeamento JPA (`spring.jpa.hibernate.ddl-auto=validate`).
 
-O schema operacional de referência é `../banco/scripts/03_tables.sql`. No estado atual, as migrations não criam todas as tabelas exigidas pelas entidades de estoque, alertas, promoções e fidelidade. Portanto, antes de executar contra banco vazio, o banco precisa estar provisionado com o schema operacional compatível; caso contrário, a validação Hibernate falhará na inicialização.
+O schema operacional de referência está no projeto `Mottainai-Banco-Operacional`. O banco precisa estar provisionado antes de iniciar a API. O Flyway fica desativado por padrão. Para desenvolvimento local, o perfil `local` executa apenas as migrations provisórias em `src/main/resources/db/migration-local`, partindo de um schema operacional já existente. As migrations V1 a V9 permanecem intactas.
+
+Configure `DB_APP_ROLE` com um role de login existente, sem `SUPERUSER`, `BYPASSRLS`, propriedade das tabelas protegidas ou permissão de `CREATE` no schema `mottainai`. Configure `DB_MIGRATION_USER` como um role distinto, com permissão para aplicar as migrations e definir as funções de bootstrap. A senha de `DB_APP_ROLE` é informada em `DB_PASSWORD`. Execute o perfil local somente em banco de desenvolvimento isolado. V12 concede à aplicação os privilégios mínimos para os fluxos de autenticação e funcionários; os demais módulos ainda dependem dos grants operacionais próprios. V13 exige emails únicos sem diferenciar maiúsculas e valida cargo e loja nos tokens de recuperação e convite. A migration interrompe a instalação se já houver emails duplicados por essa regra. As estruturas e os grants provisórios de V10 a V13 precisam ser aprovados e incorporados ao banco operacional antes de usar esta versão da API fora desse ambiente.
 
 ## Executar
 
 ```bash
 bash ./mvnw spring-boot:run
 ```
+
+Para iniciar o perfil de desenvolvimento com migrations provisórias, defina `SPRING_PROFILES_ACTIVE=local` no ambiente antes de executar o comando acima.
 
 Documentação interativa:
 
@@ -42,8 +49,8 @@ Documentação interativa:
 
 ### Equipe
 
-1. Faça `POST /api/v1/auth/login`.
-2. Envie o token retornado nas rotas de equipe:
+1. Faça `POST /api/v1/auth/login` com CPF e senha.
+2. Envie o access token retornado nas rotas de equipe:
 
 ```http
 Authorization: Bearer <jwt>
@@ -63,7 +70,7 @@ Authorization: Bearer <firebase-id-token>
 
 | Módulo | Rotas |
 | --- | --- |
-| Autenticação | `POST /api/v1/auth/login`, `POST /api/v1/auth/forgot-password`, `POST /api/v1/auth/reset-password` |
+| Autenticação | `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `POST /api/v1/auth/refresh`, `GET /api/v1/auth/profile`, `POST /api/v1/auth/password-recovery`, `PUT /api/v1/auth/password`, `GET /api/v1/auth/password-reset/validate`, `POST /api/v1/auth/password-reset` |
 | Endereços | `POST, GET /api/v1/addresses`; `GET, PUT /api/v1/addresses/{id}` |
 | Empresas | `POST, GET /api/v1/companies`; `GET, PUT, DELETE /api/v1/companies/{id}` |
 | Planos | `POST, GET /api/v1/subscription-plans`; `GET, PUT, DELETE /api/v1/subscription-plans/{id}` |
@@ -78,7 +85,7 @@ Authorization: Bearer <firebase-id-token>
 | Sugestões | `GET, POST /api/v1/suggestions`; `GET /api/v1/suggestions/{id}`; `POST /api/v1/suggestions/{id}/approve`, `POST /api/v1/suggestions/{id}/reject` |
 | Promoções | `GET, POST /api/v1/promotions`; `GET, PUT /api/v1/promotions/{id}`; `POST /api/v1/promotions/{id}/activate`, `POST /api/v1/promotions/{id}/deactivate` |
 | Itens de promoção | `GET, POST /api/v1/promotions/{promotionId}/items`; `DELETE /api/v1/promotions/{promotionId}/items/{id}` |
-| Perfil de equipe | `GET /api/v1/users/me`, `GET /api/v1/stores/me`, `GET /api/v1/store-users`, `GET /api/v1/store-users/{id}`, `POST /api/v1/store-users/invite`, `PATCH /api/v1/store-users/{id}` |
+| Funcionários | `POST /api/v1/employees`, `GET /api/v1/employees-store`, `GET /api/v1/employees-company`, `GET, PUT, DELETE /api/v1/employees/{id}`, `PUT /api/v1/employees/{id}/status`, `GET /api/v1/employees/{id}/audit-logs`, `GET /api/v1/employees/{id}/shifts`, `GET /api/v1/employees/{id}/cancel-request` |
 | Fidelidade do cliente | `GET /api/v1/client/loyalty/balance`, `GET /api/v1/client/loyalty/transactions`, `POST /api/v1/client/loyalty/redeem` |
 
 As listagens paginadas aceitam os parâmetros padrão do Spring Data, como `page`, `size` e `sort`. Consulte o Swagger para os DTOs de request/response, exemplos e códigos de erro de cada operação.
