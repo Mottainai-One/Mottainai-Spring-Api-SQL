@@ -74,6 +74,10 @@ public class EmployeeInvitationTokenRepository {
         return count != null && count > 0;
     }
 
-    public record Invitation(UUID id, Integer userId, OffsetDateTime expiresAt) {
+    public record Invitation(
+            UUID id,
+            Integer userId,
+            OffsetDateTime expiresAt
+    ) {
     }
 }
