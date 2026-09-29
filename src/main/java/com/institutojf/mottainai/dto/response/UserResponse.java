@@ -8,7 +8,6 @@ public record UserResponse(
         String phone,
         String role,
         Boolean active,
-        Integer storeId,
-        String firebaseUid
+        Integer storeId
 ) {
 }
