@@ -29,7 +29,7 @@ spring:
       mail.smtp.starttls.enable: true
 
   flyway:
-    enabled: true
+    enabled: false
     schemas: mottainai
     default-schema: mottainai
     create-schemas: true
@@ -44,6 +44,9 @@ security:
     secret: ${JWT_SECRET}
     issuer: https://mottainai.local
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+    refresh-expiration-days: ${JWT_REFRESH_EXPIRATION_DAYS:7}
+  staff:
+    password-reset-url: ${STAFF_PASSWORD_RESET_URL:http://localhost:3000/reset-password}
   firebase:
     project-id: ${FIREBASE_PROJECT_ID:}
 
