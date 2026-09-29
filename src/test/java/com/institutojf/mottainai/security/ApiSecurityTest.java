@@ -4,6 +4,7 @@ import com.institutojf.mottainai.controller.ProductController;
 import com.institutojf.mottainai.dto.response.ProductResponse;
 import com.institutojf.mottainai.repository.AppUserRepository;
 import com.institutojf.mottainai.service.ProductService;
+import com.institutojf.mottainai.service.RlsContextService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,13 +17,16 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductController.class)
@@ -30,7 +34,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = {
         "security.jwt.secret=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
         "security.jwt.issuer=https://mottainai.local",
-        "security.jwt.expiration-minutes=60"
+        "security.jwt.expiration-minutes=60",
+        "security.cors.allowed-origins=https://app.example"
 })
 class ApiSecurityTest {
 
@@ -42,6 +47,9 @@ class ApiSecurityTest {
 
     @MockitoBean
     private AppUserRepository appUserRepository;
+
+    @MockitoBean
+    private RlsContextService rlsContextService;
 
     @Test
     @DisplayName("Should reject unauthenticated API request")
@@ -78,6 +86,17 @@ class ApiSecurityTest {
                 .andExpect(status().isCreated());
 
         verify(productService).create(any());
+    }
+
+    @Test
+    @DisplayName("Should allow idempotency header in browser preflight")
+    void shouldAllowIdempotencyHeaderInPreflight() throws Exception {
+        mockMvc.perform(options("/api/v1/loyalty/redeem")
+                        .header("Origin", "https://app.example")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "Idempotency-Key,Content-Type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Headers", containsString("Idempotency-Key")));
     }
 
     private String productRequest() {

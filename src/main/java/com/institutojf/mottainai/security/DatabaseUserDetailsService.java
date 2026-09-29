@@ -4,28 +4,34 @@ import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.model.Employee;
 import com.institutojf.mottainai.model.EmployeeRole;
 import com.institutojf.mottainai.repository.AppUserRepository;
+import com.institutojf.mottainai.service.RlsContextService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
 
 @Service
+@RequiredArgsConstructor
 public class DatabaseUserDetailsService implements UserDetailsService {
 
     private final AppUserRepository appUserRepository;
+    private final RlsContextService rlsContextService;
 
-    public DatabaseUserDetailsService(AppUserRepository appUserRepository) {
-        this.appUserRepository = appUserRepository;
-    }
-
+    // Valida o CPF e inicializa o contexto RLS antes de buscar a conta
     @Override
-    public UserDetails loadUserByUsername(String email) {
-        AppUser user = appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(email)
+    @Transactional(readOnly = true)
+    public UserDetails loadUserByUsername(String cpf) {
+        if (!rlsContextService.bootstrapByCpf(cpf)) {
+            throw new UsernameNotFoundException("Invalid CPF or password");
+        }
+        AppUser user = appUserRepository.findByEmployee_CpfAndActiveTrueAndDeletedAtIsNull(cpf)
                 .filter(this::hasActiveEmployment)
-                .orElseThrow(() -> new UsernameNotFoundException("Invalid email or password"));
+                .orElseThrow(() -> new UsernameNotFoundException("Invalid CPF or password"));
 
         String role = user.getEmployee().getRole().getName().toUpperCase(Locale.ROOT);
         return User.withUsername(user.getEmail())
