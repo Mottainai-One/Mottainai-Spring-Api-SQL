@@ -48,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -235,7 +236,7 @@ class AuthenticationServiceTest {
 
         assertThrows(BusinessException.class, () -> authenticationService.resetPassword(request));
 
-        verify(rlsContextService, never()).bootstrapByToken(any(), any());
+        verify(rlsContextService, never()).bootstrapByToken(any(), anyBoolean());
     }
 
     @Test
@@ -388,8 +389,8 @@ class AuthenticationServiceTest {
         user.setActive(false);
         UUID invitationId = UUID.randomUUID();
         when(tokenHashService.hash("invite-token")).thenReturn("invite-hash");
-        when(rlsContextService.bootstrapByToken(eq("invite-hash"), any()))
-                .thenAnswer(invocation -> "INVITATION".equals(invocation.getArgument(1)) ? user.getId() : null);
+        when(rlsContextService.bootstrapByToken(eq("invite-hash"), anyBoolean()))
+                .thenAnswer(invocation -> Boolean.TRUE.equals(invocation.getArgument(1)) ? user.getId() : null);
         when(appUserRepository.findByIdWithWriteLock(user.getId())).thenReturn(Optional.of(user));
         when(invitationTokenRepository.findUnusedByHashForUpdate("invite-hash"))
                 .thenReturn(Optional.of(new EmployeeInvitationTokenRepository.Invitation(
@@ -417,7 +418,7 @@ class AuthenticationServiceTest {
         token.setUser(user);
         token.setExpiresAt(OffsetDateTime.now().plusMinutes(10));
         when(tokenHashService.hash("recovery-token")).thenReturn("recovery-hash");
-        when(rlsContextService.bootstrapByToken("recovery-hash", "RECOVERY")).thenReturn(user.getId());
+        when(rlsContextService.bootstrapByToken("recovery-hash", false)).thenReturn(user.getId());
         when(appUserRepository.findByIdWithWriteLock(user.getId())).thenReturn(Optional.of(user));
         when(passwordResetTokenRepository.findUnusedByHashForUpdate("recovery-hash"))
                 .thenReturn(Optional.of(token));
@@ -448,7 +449,7 @@ class AuthenticationServiceTest {
         when(appUserRepository.findByIdWithWriteLock(user.getId())).thenReturn(Optional.of(user));
         when(appUserRepository.matchesCurrentIdentity(user.getId(), request.email(), request.cpf(), true))
                 .thenReturn(true);
-        when(passwordResetTokenRepository.findFirstByUser_IdAndUsedAtIsNullOrderByCreatedAtDesc(user.getId()))
+        when(passwordResetTokenRepository.findFirstByUser_IdAndInvitationIdIsNullAndUsedAtIsNullOrderByCreatedAtDesc(user.getId()))
                 .thenReturn(Optional.empty());
         when(tokenHashService.newToken()).thenReturn("recovery-token");
         when(tokenHashService.hash("recovery-token")).thenReturn("recovery-hash");

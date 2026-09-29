@@ -161,8 +161,8 @@ public class AuthenticationService {
     @Transactional(readOnly = true)
     public boolean validateResetToken(String rawToken) {
         String hash = tokenHashService.hash(rawToken);
-        return rlsContextService.bootstrapByToken(hash, "RECOVERY") != null
-                || rlsContextService.bootstrapByToken(hash, "INVITATION") != null;
+        return rlsContextService.bootstrapByToken(hash, false) != null
+                || rlsContextService.bootstrapByToken(hash, true) != null;
     }
 
     /**
@@ -174,10 +174,10 @@ public class AuthenticationService {
         validateNewPassword(request.newPassword());
         // Busca apenas o hash do token para não persistir o valor recebido por email
         String hash = tokenHashService.hash(request.token());
-        Integer userId = rlsContextService.bootstrapByToken(hash, "RECOVERY");
+        Integer userId = rlsContextService.bootstrapByToken(hash, false);
         boolean invitation = false;
         if (userId == null) {
-            userId = rlsContextService.bootstrapByToken(hash, "INVITATION");
+            userId = rlsContextService.bootstrapByToken(hash, true);
             invitation = true;
         }
         if (userId == null) {
@@ -242,7 +242,7 @@ public class AuthenticationService {
         }
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         boolean recent = passwordResetTokenRepository
-                .findFirstByUser_IdAndUsedAtIsNullOrderByCreatedAtDesc(user.getId())
+                .findFirstByUser_IdAndInvitationIdIsNullAndUsedAtIsNullOrderByCreatedAtDesc(user.getId())
                 .map(token -> token.getCreatedAt().plusMinutes(RATE_LIMIT_MINUTES).isAfter(now))
                 .orElse(false);
         if (recent) {

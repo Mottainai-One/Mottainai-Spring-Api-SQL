@@ -36,10 +36,10 @@ public class RlsContextService {
     }
 
     // Localiza o dono de um token válido e define o contexto RLS
-    public Integer bootstrapByToken(String tokenHash, String purpose) {
+    public Integer bootstrapByToken(String tokenHash, boolean invitation) {
         return jdbcTemplate.queryForObject(
                 "SELECT mottainai.fn_bootstrap_staff_context_by_token(?, ?)",
-                Integer.class, tokenHash, purpose);
+                Integer.class, tokenHash, invitation);
     }
 
     /**

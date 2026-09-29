@@ -17,7 +17,7 @@ public class StaffEmailFailureService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void invalidateRecoveryToken(String hash) {
-        Integer userId = rlsContextService.bootstrapByToken(hash, "RECOVERY");
+        Integer userId = rlsContextService.bootstrapByToken(hash, false);
         if (userId != null) {
             tokenRepository.findUnusedByHashForUpdate(hash).ifPresent(token -> {
                 token.setUsedAt(OffsetDateTime.now(ZoneOffset.UTC));

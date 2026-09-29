@@ -16,7 +16,7 @@ public class EmployeeInvitationTokenRepository {
 
     public void create(UUID invitationId, Integer userId, String tokenHash, OffsetDateTime expiresAt) {
         jdbcTemplate.update("""
-                INSERT INTO mottainai.employee_invitation_token
+                INSERT INTO mottainai.password_reset_token
                     (invitation_id, user_id, token_hash, expires_at)
                 VALUES (?, ?, ?, ?)
                 """, invitationId, userId, tokenHash, expiresAt);
@@ -25,8 +25,8 @@ public class EmployeeInvitationTokenRepository {
     public Optional<Invitation> findUnusedByHashForUpdate(String tokenHash) {
         List<Invitation> invitations = jdbcTemplate.query("""
                 SELECT invitation_id, user_id, expires_at
-                  FROM mottainai.employee_invitation_token
-                 WHERE token_hash = ? AND used_at IS NULL
+                  FROM mottainai.password_reset_token
+                 WHERE token_hash = ? AND invitation_id IS NOT NULL AND used_at IS NULL
                  FOR UPDATE
                 """, (resultSet, rowNumber) -> new Invitation(
                 resultSet.getObject("invitation_id", UUID.class),
@@ -38,38 +38,39 @@ public class EmployeeInvitationTokenRepository {
 
     public boolean existsUnusedByHash(String tokenHash) {
         Integer count = jdbcTemplate.queryForObject("""
-                SELECT count(*) FROM mottainai.employee_invitation_token
-                 WHERE token_hash = ? AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+                SELECT count(*) FROM mottainai.password_reset_token
+                 WHERE token_hash = ? AND invitation_id IS NOT NULL
+                   AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
                 """, Integer.class, tokenHash);
         return count != null && count == 1;
     }
 
     public void markUsed(UUID invitationId) {
         jdbcTemplate.update("""
-                UPDATE mottainai.employee_invitation_token SET used_at = CURRENT_TIMESTAMP
+                UPDATE mottainai.password_reset_token SET used_at = CURRENT_TIMESTAMP
                  WHERE invitation_id = ? AND used_at IS NULL
                 """, invitationId);
     }
 
     public void invalidateUnusedForUser(Integer userId) {
         jdbcTemplate.update("""
-                UPDATE mottainai.employee_invitation_token SET used_at = CURRENT_TIMESTAMP
-                 WHERE user_id = ? AND used_at IS NULL
+                UPDATE mottainai.password_reset_token SET used_at = CURRENT_TIMESTAMP
+                 WHERE user_id = ? AND invitation_id IS NOT NULL AND used_at IS NULL
                 """, userId);
     }
 
     public boolean hasPendingForUser(Integer userId) {
         Integer count = jdbcTemplate.queryForObject("""
-                SELECT count(*) FROM mottainai.employee_invitation_token
-                 WHERE user_id = ? AND used_at IS NULL
+                SELECT count(*) FROM mottainai.password_reset_token
+                 WHERE user_id = ? AND invitation_id IS NOT NULL AND used_at IS NULL
                 """, Integer.class, userId);
         return count != null && count > 0;
     }
 
     public boolean hasRecentForUser(Integer userId, OffsetDateTime since) {
         Integer count = jdbcTemplate.queryForObject("""
-                SELECT count(*) FROM mottainai.employee_invitation_token
-                 WHERE user_id = ? AND created_at >= ?
+                SELECT count(*) FROM mottainai.password_reset_token
+                 WHERE user_id = ? AND invitation_id IS NOT NULL AND created_at >= ?
                 """, Integer.class, userId, since);
         return count != null && count > 0;
     }

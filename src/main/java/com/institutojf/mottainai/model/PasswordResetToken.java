@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "password_reset_token", schema = "mottainai")
@@ -31,6 +32,9 @@ public class PasswordResetToken {
 
     @Column(name = "token_hash", nullable = false)
     private String tokenHash;
+
+    @Column(name = "invitation_id")
+    private UUID invitationId;
 
     @Column(name = "expires_at", nullable = false)
     private OffsetDateTime expiresAt;
