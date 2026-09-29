@@ -1,7 +1,7 @@
 package com.institutojf.mottainai.security;
 
-import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.repository.AppUserRepository;
+import com.institutojf.mottainai.service.RlsContextService;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -39,6 +40,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -53,6 +56,7 @@ import java.util.Locale;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@EnableTransactionManagement(order = Ordered.HIGHEST_PRECEDENCE)
 @EnableConfigurationProperties({JwtProperties.class, FirebaseProperties.class})
 public class SecurityConfig {
     private static final String FIREBASE_JWK_SET_URI =
@@ -97,7 +101,7 @@ public class SecurityConfig {
 
     @Bean
     @Order(2)
-    public SecurityFilterChain staffSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain staffSecurityFilterChain(HttpSecurity http, RlsContextService rlsContextService) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
@@ -105,13 +109,16 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
                                 "/api/v1/auth/login",
-                                "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/reset-password",
+                                "/api/v1/auth/refresh",
+                                "/api/v1/auth/password-recovery",
+                                "/api/v1/auth/password-reset",
+                                "/api/v1/auth/password-reset/validate",
                                 "/api-docs/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/actuator/health"
                         ).permitAll()
+                        .requestMatchers("/api/v1/auth/logout", "/api/v1/auth/password").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/**").hasAnyRole("ADMINISTRATOR", "MANAGER")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/**").hasAnyRole("ADMINISTRATOR", "MANAGER")
@@ -120,7 +127,8 @@ public class SecurityConfig {
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                );
+                )
+                .addFilterAfter(new StaffAccessFilter(rlsContextService), BearerTokenAuthenticationFilter.class);
 
         return http.build();
     }
@@ -130,7 +138,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key"));
         configuration.setExposedHeaders(List.of("Location"));
         configuration.setAllowCredentials(false);
 
@@ -161,10 +169,7 @@ public class SecurityConfig {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtSecretKey())
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
-        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                JwtValidators.createDefaultWithIssuer(jwtProperties.issuer()),
-                tokenVersionValidator()
-        ));
+        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(jwtProperties.issuer()));
         return decoder;
     }
 
@@ -188,42 +193,6 @@ public class SecurityConfig {
         JwtAuthenticationConverter authenticationConverter = new JwtAuthenticationConverter();
         authenticationConverter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
         return authenticationConverter;
-    }
-
-    /**
-     * Compara a versão do JWT com a versão atual do usuário
-     * Quando a senha muda, tokens antigos deixam de funcionar
-     */
-    private OAuth2TokenValidator<Jwt> tokenVersionValidator() {
-        return jwt -> appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(jwt.getSubject())
-                .filter(user -> hasCurrentTokenVersion(user, jwt))
-                .map(user -> OAuth2TokenValidatorResult.success())
-                .orElseGet(() -> OAuth2TokenValidatorResult.failure(
-                        new OAuth2Error("invalid_token", "Token is no longer valid", null)
-                ));
-    }
-
-    private boolean hasCurrentTokenVersion(AppUser user, Jwt jwt) {
-        Object tokenVersion = jwt.getClaim("tokenVersion");
-        if (!(tokenVersion instanceof Number version) || user.getTokenVersion() == null
-                || user.getTokenVersion() != version.intValue()) {
-            return false;
-        }
-        if (user.getEmployee() == null) {
-            return false;
-        }
-        return Boolean.TRUE.equals(user.getEmployee().getActive())
-                && user.getEmployee().getDeletedAt() == null
-                && user.getEmployee().getRole() != null
-                && Boolean.TRUE.equals(user.getEmployee().getRole().getActive())
-                && user.getEmployee().getRole().getDeletedAt() == null
-                && tokenContainsCurrentRole(user, jwt);
-    }
-
-    private boolean tokenContainsCurrentRole(AppUser user, Jwt jwt) {
-        List<String> tokenRoles = jwt.getClaimAsStringList("roles");
-        String currentRole = user.getEmployee().getRole().getName().toUpperCase(Locale.ROOT);
-        return tokenRoles != null && tokenRoles.size() == 1 && tokenRoles.contains(currentRole);
     }
 
     private SecretKey jwtSecretKey() {
