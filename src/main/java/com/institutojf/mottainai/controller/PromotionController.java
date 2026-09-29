@@ -7,6 +7,7 @@ import com.institutojf.mottainai.dto.request.UpdatePromotionRequest;
 import com.institutojf.mottainai.dto.response.PromotionResponse;
 import com.institutojf.mottainai.service.PromotionService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,13 +24,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/promotions")
+@RequiredArgsConstructor
 public class PromotionController implements PromotionControllerApi {
 
     private final PromotionService promotionService;
-
-    public PromotionController(PromotionService promotionService) {
-        this.promotionService = promotionService;
-    }
 
     @Override
     @GetMapping

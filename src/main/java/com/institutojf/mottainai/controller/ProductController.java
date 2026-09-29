@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.request.UpdateProductRequest;
 import com.institutojf.mottainai.dto.response.ProductResponse;
 import com.institutojf.mottainai.service.ProductService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -22,13 +23,10 @@ import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/products")
+@RequiredArgsConstructor
 public class ProductController implements ProductControllerApi {
 
     private final ProductService productService;
-
-    public ProductController(ProductService productService) {
-        this.productService = productService;
-    }
 
     @Override
     @PostMapping

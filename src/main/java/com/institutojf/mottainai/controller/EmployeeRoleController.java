@@ -5,6 +5,7 @@ import com.institutojf.mottainai.dto.request.EmployeeRoleRequest;
 import com.institutojf.mottainai.dto.response.EmployeeRoleResponse;
 import com.institutojf.mottainai.service.EmployeeRoleService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,12 +23,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/employee-roles")
+@RequiredArgsConstructor
 public class EmployeeRoleController implements EmployeeRoleControllerApi {
     private final EmployeeRoleService employeeRoleService;
-
-    public EmployeeRoleController(EmployeeRoleService employeeRoleService) {
-        this.employeeRoleService = employeeRoleService;
-    }
 
     @Override
     @GetMapping

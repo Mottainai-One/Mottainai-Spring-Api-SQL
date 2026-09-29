@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.request.CreateAlertRequest;
 import com.institutojf.mottainai.dto.response.AlertResponse;
 import com.institutojf.mottainai.service.AlertService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,13 +21,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/alerts")
+@RequiredArgsConstructor
 public class AlertController implements AlertControllerApi {
 
     private final AlertService alertService;
-
-    public AlertController(AlertService alertService) {
-        this.alertService = alertService;
-    }
 
     @Override
     @GetMapping
