@@ -10,8 +10,10 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -159,6 +161,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    // Parâmetro obrigatório não informado
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingServletRequestParameterException(MissingServletRequestParameterException exception) {
+        var error = new ApiError(
+                LocalDateTime.now(ZoneOffset.UTC),
+                400,
+                "BAD_REQUEST",
+                "Missing required parameter: " + exception.getParameterName(),
+                null
+        );
+        return ResponseEntity.badRequest().body(error);
+    }
+
     // Dados enviados no formato errado
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception) {
@@ -185,14 +200,27 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
-    // Login inválido sem informar se o email existe
+    // Permissão insuficiente para a operação solicitada
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDeniedException(AccessDeniedException exception) {
+        var error = new ApiError(
+                LocalDateTime.now(ZoneOffset.UTC),
+                403,
+                "FORBIDDEN",
+                "Access denied",
+                null
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    // Login inválido sem informar se o CPF existe
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> handleAuthenticationException(AuthenticationException exception) {
         var error = new ApiError(
                 LocalDateTime.now(ZoneOffset.UTC),
                 401,
                 "UNAUTHORIZED",
-                "Invalid email or password",
+                "Invalid CPF or password",
                 null
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);

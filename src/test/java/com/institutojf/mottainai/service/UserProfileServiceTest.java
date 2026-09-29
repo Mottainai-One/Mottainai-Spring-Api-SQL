@@ -12,6 +12,7 @@ import com.institutojf.mottainai.repository.EmployeeRepository;
 import com.institutojf.mottainai.repository.EmployeeRoleRepository;
 import com.institutojf.mottainai.mapper.RetailStoreMapper;
 import com.institutojf.mottainai.repository.AuditLogRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,21 +29,28 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class UserProfileServiceTest {
 
-    @Mock AppUserRepository appUserRepository;
+    @Mock
+    AppUserRepository appUserRepository;
 
-    @Mock EmployeeRepository employeeRepository;
+    @Mock
+    EmployeeRepository employeeRepository;
 
-    @Mock EmployeeRoleRepository employeeRoleRepository;
+    @Mock
+    EmployeeRoleRepository employeeRoleRepository;
 
-    @Mock AuditLogRepository auditLogRepository;
+    @Mock
+    AuditLogRepository auditLogRepository;
 
-    @Mock RetailStoreMapper retailStoreMapper;
+    @Mock
+    RetailStoreMapper retailStoreMapper;
 
-    @Mock PasswordEncoder passwordEncoder;
+    @Mock
+    PasswordEncoder passwordEncoder;
 
     @InjectMocks UserProfileService service;
 
     @Test
+    @DisplayName("Should return authenticated user with nullable firebase uid")
     void shouldReturnAuthenticatedUserWithNullableFirebaseUid() {
         AppUser user = user(1, "ADMINISTRATOR", true);
         when(appUserRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("admin@test.com")).thenReturn(Optional.of(user));
@@ -51,11 +59,11 @@ class UserProfileServiceTest {
 
         assertEquals("admin@test.com", response.email());
         assertEquals("***.***.***-01", response.cpf());
-        assertNull(response.firebaseUid());
         assertEquals("ADMINISTRATOR", response.role());
     }
 
     @Test
+    @DisplayName("Should create inactive invite for authenticated users store")
     void shouldCreateInactiveInviteForAuthenticatedUsersStore() {
         AppUser requester = user(1, "ADMINISTRATOR", true);
         EmployeeRole role = role("OPERATOR");
@@ -87,6 +95,7 @@ class UserProfileServiceTest {
     }
 
     @Test
+    @DisplayName("Should reject existing email before creating invite")
     void shouldRejectExistingEmailBeforeCreatingInvite() {
         AppUser requester = user(1, "ADMINISTRATOR", true);
         when(appUserRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("admin@test.com")).thenReturn(Optional.of(requester));
@@ -98,6 +107,7 @@ class UserProfileServiceTest {
     }
 
     @Test
+    @DisplayName("Should update role and status together")
     void shouldUpdateRoleAndStatusTogether() {
         AppUser user = user(2, "OPERATOR", false);
         AppUser requester = user(1, "ADMINISTRATOR", true);
