@@ -35,14 +35,14 @@ public class AppUser {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Column(name = "firebase_uid", length = 255, unique = true)
-    private String firebaseUid;
-
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
     @Column(name = "token_version", nullable = false)
     private Integer tokenVersion = 0;
+
+    @Column(name = "password_set", nullable = false)
+    private Boolean passwordSet = true;
 
     @Column(nullable = false)
     private Boolean active;
