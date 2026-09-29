@@ -17,6 +17,7 @@ import com.institutojf.mottainai.repository.LoyaltyRedemptionRepository;
 import com.institutojf.mottainai.repository.LoyaltyRewardRepository;
 import com.institutojf.mottainai.repository.LoyaltyTransactionRepository;
 import com.institutojf.mottainai.repository.OutboxEventRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class LoyaltyService {
 
     private final LoyaltyAccountRepository loyaltyAccountRepository;
@@ -31,14 +33,6 @@ public class LoyaltyService {
     private final LoyaltyRewardRepository loyaltyRewardRepository;
     private final LoyaltyRedemptionRepository loyaltyRedemptionRepository;
     private final OutboxEventRepository outboxEventRepository;
-
-    public LoyaltyService(LoyaltyAccountRepository loyaltyAccountRepository, LoyaltyTransactionRepository loyaltyTransactionRepository, LoyaltyRewardRepository loyaltyRewardRepository, LoyaltyRedemptionRepository loyaltyRedemptionRepository, OutboxEventRepository outboxEventRepository) {
-        this.loyaltyAccountRepository = loyaltyAccountRepository;
-        this.loyaltyTransactionRepository = loyaltyTransactionRepository;
-        this.loyaltyRewardRepository = loyaltyRewardRepository;
-        this.loyaltyRedemptionRepository = loyaltyRedemptionRepository;
-        this.outboxEventRepository = outboxEventRepository;
-    }
 
     @Transactional(readOnly = true)
     public LoyaltyAccountResponse getLoyaltyAccount(Integer customerId) {

@@ -8,6 +8,7 @@ import com.institutojf.mottainai.model.enums.AlertStatus;
 import com.institutojf.mottainai.model.RetailStore;
 import com.institutojf.mottainai.repository.AlertRepository;
 import com.institutojf.mottainai.repository.RetailStoreRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,15 +16,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class AlertService {
 
     private final AlertRepository alertRepository;
     private final RetailStoreRepository retailStoreRepository;
-
-    public AlertService(AlertRepository alertRepository, RetailStoreRepository retailStoreRepository) {
-        this.alertRepository = alertRepository;
-        this.retailStoreRepository = retailStoreRepository;
-    }
 
     @Transactional
     public AlertResponse createAlert(CreateAlertRequest request) {

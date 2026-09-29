@@ -15,6 +15,7 @@ import com.institutojf.mottainai.repository.ProductRepository;
 import com.institutojf.mottainai.repository.SupplierProductRepository;
 import com.institutojf.mottainai.repository.TaxProfileRepository;
 import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 @Service
+@RequiredArgsConstructor
 public class ProductService {
 
     private final ProductRepository productRepository;
@@ -32,15 +34,6 @@ public class ProductService {
     private final SupplierProductRepository supplierProductRepository;
     private final ProductMapper productMapper;
     private final EntityManager entityManager;
-
-    public ProductService(ProductRepository productRepository, ProductCategoryRepository categoryRepository, TaxProfileRepository taxProfileRepository, SupplierProductRepository supplierProductRepository, ProductMapper productMapper, EntityManager entityManager) {
-        this.productRepository = productRepository;
-        this.categoryRepository = categoryRepository;
-        this.taxProfileRepository = taxProfileRepository;
-        this.supplierProductRepository = supplierProductRepository;
-        this.productMapper = productMapper;
-        this.entityManager = entityManager;
-    }
 
     @Transactional
     public ProductResponse create(CreateProductRequest request) {

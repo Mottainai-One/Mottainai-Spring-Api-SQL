@@ -10,6 +10,7 @@ import com.institutojf.mottainai.model.SystemRule;
 import com.institutojf.mottainai.repository.AppUserRepository;
 import com.institutojf.mottainai.repository.AuditLogRepository;
 import com.institutojf.mottainai.repository.SystemRuleRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -22,19 +23,12 @@ import java.util.List;
 import java.util.Locale;
 
 @Service
+@RequiredArgsConstructor
 public class SystemRuleService {
     private final SystemRuleRepository systemRuleRepository;
     private final AppUserRepository appUserRepository;
     private final AuditLogRepository auditLogRepository;
     private final JsonMapper jsonMapper;
-
-    public SystemRuleService(SystemRuleRepository systemRuleRepository, AppUserRepository appUserRepository,
-                             AuditLogRepository auditLogRepository, JsonMapper jsonMapper) {
-        this.systemRuleRepository = systemRuleRepository;
-        this.appUserRepository = appUserRepository;
-        this.auditLogRepository = auditLogRepository;
-        this.jsonMapper = jsonMapper;
-    }
 
     @Transactional(readOnly = true)
     public List<SystemRuleResponse> findAll() {
