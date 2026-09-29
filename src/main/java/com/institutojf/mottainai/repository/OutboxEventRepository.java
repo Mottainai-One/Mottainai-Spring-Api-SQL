@@ -1,5 +1,6 @@
 package com.institutojf.mottainai.repository;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -12,15 +13,11 @@ import java.util.Map;
 import java.util.Optional;
 
 @Repository
+@RequiredArgsConstructor
 public class OutboxEventRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final JsonMapper jsonMapper;
-
-    public OutboxEventRepository(JdbcTemplate jdbcTemplate, JsonMapper jsonMapper) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.jsonMapper = jsonMapper;
-    }
 
     public void lockIdempotencyKey(String idempotencyKey) {
         jdbcTemplate.execute(
