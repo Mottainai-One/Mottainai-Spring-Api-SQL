@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.request.UpdateRetailStoreRequest;
 import com.institutojf.mottainai.dto.response.RetailStoreResponse;
 import com.institutojf.mottainai.service.RetailStoreService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -23,13 +24,10 @@ import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/stores")
+@RequiredArgsConstructor
 public class RetailStoreController implements RetailStoreControllerApi {
 
     private final RetailStoreService retailStoreService;
-
-    public RetailStoreController(RetailStoreService retailStoreService) {
-        this.retailStoreService = retailStoreService;
-    }
 
     @Override
     @PostMapping

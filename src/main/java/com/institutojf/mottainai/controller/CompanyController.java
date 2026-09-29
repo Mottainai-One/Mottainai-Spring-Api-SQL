@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.request.UpdateCompanyRequest;
 import com.institutojf.mottainai.dto.response.CompanyResponse;
 import com.institutojf.mottainai.service.CompanyService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -24,13 +25,10 @@ import java.net.URI;
 @RestController
 @PreAuthorize("hasRole('ADMINISTRATOR')")
 @RequestMapping("/api/v1/companies")
+@RequiredArgsConstructor
 public class CompanyController implements CompanyControllerApi {
 
     private final CompanyService companyService;
-
-    public CompanyController(CompanyService companyService) {
-        this.companyService = companyService;
-    }
 
     @Override
     @PostMapping

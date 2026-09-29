@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.request.UpdateAddressRequest;
 import com.institutojf.mottainai.dto.response.AddressResponse;
 import com.institutojf.mottainai.service.AddressService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -21,13 +22,10 @@ import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/addresses")
+@RequiredArgsConstructor
 public class AddressController implements AddressControllerApi {
 
     private final AddressService addressService;
-
-    public AddressController(AddressService addressService) {
-        this.addressService = addressService;
-    }
 
     @Override
     @PostMapping

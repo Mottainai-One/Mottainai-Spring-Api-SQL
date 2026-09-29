@@ -3,6 +3,7 @@ package com.institutojf.mottainai.controller;
 import com.institutojf.mottainai.controller.swagger.InventoryMovementControllerApi;
 import com.institutojf.mottainai.dto.response.InventoryMovementResponse;
 import com.institutojf.mottainai.service.InventoryMovementService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -14,12 +15,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
+@RequiredArgsConstructor
 public class InventoryMovementController implements InventoryMovementControllerApi {
     private final InventoryMovementService inventoryMovementService;
-
-    public InventoryMovementController(InventoryMovementService inventoryMovementService) {
-        this.inventoryMovementService = inventoryMovementService;
-    }
 
     @Override
     @GetMapping("/api/v1/inventory-movements")

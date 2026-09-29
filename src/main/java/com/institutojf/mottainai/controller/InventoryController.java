@@ -11,6 +11,7 @@ import com.institutojf.mottainai.service.InventoryMovementService;
 import com.institutojf.mottainai.service.InventoryService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -30,14 +31,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/inventory")
+@RequiredArgsConstructor
 public class InventoryController implements InventoryControllerApi {
     private final InventoryService inventoryService;
     private final InventoryMovementService inventoryMovementService;
-
-    public InventoryController(InventoryService inventoryService, InventoryMovementService inventoryMovementService) {
-        this.inventoryService = inventoryService;
-        this.inventoryMovementService = inventoryMovementService;
-    }
 
     @Override
     @GetMapping
