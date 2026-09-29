@@ -3,6 +3,7 @@ package com.institutojf.mottainai.security;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import com.institutojf.mottainai.model.Customer;
 import com.institutojf.mottainai.repository.CustomerRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -21,6 +22,7 @@ class CustomerAccessTest {
     private CustomerRepository customerRepository;
 
     @Test
+    @DisplayName("Should resolve active customer from firebase subject")
     void shouldResolveActiveCustomerFromFirebaseSubject() {
         Customer customer = new Customer();
         customer.setId(7);
@@ -35,6 +37,7 @@ class CustomerAccessTest {
     }
 
     @Test
+    @DisplayName("Should reject unknown firebase subject")
     void shouldRejectUnknownFirebaseSubject() {
         TestingAuthenticationToken authentication = new TestingAuthenticationToken("firebase-uid", null);
         authentication.setAuthenticated(true);
