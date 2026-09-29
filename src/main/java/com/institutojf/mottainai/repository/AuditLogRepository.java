@@ -1,6 +1,7 @@
 package com.institutojf.mottainai.repository;
 
 import com.institutojf.mottainai.dto.response.AuditLogResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
+@RequiredArgsConstructor
 public class AuditLogRepository {
     private static final String INSERT_AUDIT_LOG = """
             INSERT INTO mottainai.audit_log (table_affected, operation, record_id, user_id, old_data, new_data)
@@ -22,11 +24,6 @@ public class AuditLogRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final JsonMapper jsonMapper;
-
-    public AuditLogRepository(JdbcTemplate jdbcTemplate, JsonMapper jsonMapper) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.jsonMapper = jsonMapper;
-    }
 
     public void record(String table, String operation, String recordId, Integer actorUserId,
                        Object oldData, Object newData) {
