@@ -6,6 +6,7 @@ import com.institutojf.mottainai.model.Employee;
 import com.institutojf.mottainai.model.EmployeeRole;
 import com.institutojf.mottainai.model.RetailStore;
 import com.institutojf.mottainai.repository.AppUserRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -28,6 +29,7 @@ class InventoryAccessTest {
     private Authentication authentication;
 
     @Test
+    @DisplayName("Should derive manager store instead of using requested store")
     void shouldDeriveManagerStoreInsteadOfUsingRequestedStore() {
         InventoryAccess access = new InventoryAccess(appUserRepository);
         when(authentication.isAuthenticated()).thenReturn(true);
@@ -41,6 +43,7 @@ class InventoryAccessTest {
     }
 
     @Test
+    @DisplayName("Should reject manager access to another store")
     void shouldRejectManagerAccessToAnotherStore() {
         InventoryAccess access = new InventoryAccess(appUserRepository);
         when(authentication.isAuthenticated()).thenReturn(true);
@@ -52,6 +55,7 @@ class InventoryAccessTest {
     }
 
     @Test
+    @DisplayName("Should require store parameter for administrator list")
     void shouldRequireStoreParameterForAdministratorList() {
         InventoryAccess access = new InventoryAccess(appUserRepository);
         when(authentication.isAuthenticated()).thenReturn(true);

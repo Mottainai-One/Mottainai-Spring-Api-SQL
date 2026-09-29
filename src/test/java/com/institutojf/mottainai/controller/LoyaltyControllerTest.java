@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.response.LoyaltyTransactionResponse;
 import com.institutojf.mottainai.model.Customer;
 import com.institutojf.mottainai.security.CustomerAccess;
 import com.institutojf.mottainai.service.LoyaltyService;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +30,7 @@ class LoyaltyControllerTest {
     private LoyaltyController controller;
 
     @Test
+    @DisplayName("Should get balance for authenticated customer")
     void shouldGetBalanceForAuthenticatedCustomer() {
         Customer customer = customer(5);
         LoyaltyAccountResponse response = new LoyaltyAccountResponse(1, 5, "Customer", "customer@example.com", 10, null, true, null);
@@ -40,6 +42,7 @@ class LoyaltyControllerTest {
     }
 
     @Test
+    @DisplayName("Should get transactions for authenticated customer")
     void shouldGetTransactionsForAuthenticatedCustomer() {
         Customer customer = customer(5);
         TestingAuthenticationToken authentication = authentication();
@@ -51,6 +54,7 @@ class LoyaltyControllerTest {
     }
 
     @Test
+    @DisplayName("Should redeem for authenticated customer")
     void shouldRedeemForAuthenticatedCustomer() {
         Customer customer = customer(5);
         TestingAuthenticationToken authentication = authentication();

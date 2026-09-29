@@ -13,6 +13,7 @@ import com.institutojf.mottainai.model.RetailStore;
 import com.institutojf.mottainai.repository.InventoryMovementRepository;
 import com.institutojf.mottainai.repository.InventoryRepository;
 import com.institutojf.mottainai.security.InventoryAccess;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -53,6 +54,7 @@ class InventoryMovementServiceTest {
     private InventoryMovementService service;
 
     @Test
+    @DisplayName("Should persist balances when movement is valid")
     void shouldPersistBalancesWhenMovementIsValid() {
         Inventory inventory = inventoryWithBalance("2.000");
         AppUser user = new AppUser();
@@ -83,6 +85,7 @@ class InventoryMovementServiceTest {
     }
 
     @Test
+    @DisplayName("Should reject movement when balance would become negative")
     void shouldRejectMovementWhenBalanceWouldBecomeNegative() {
         Inventory inventory = inventoryWithBalance("2.000");
         when(inventoryRepository.findActiveByIdForUpdate(1)).thenReturn(Optional.of(inventory));
@@ -98,6 +101,7 @@ class InventoryMovementServiceTest {
     }
 
     @Test
+    @DisplayName("Should reject invalid direction for movement type")
     void shouldRejectInvalidDirectionForMovementType() {
         Inventory inventory = inventoryWithBalance("2.000");
         when(inventoryRepository.findActiveByIdForUpdate(1)).thenReturn(Optional.of(inventory));
