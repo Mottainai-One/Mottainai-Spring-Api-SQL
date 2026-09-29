@@ -54,6 +54,11 @@ public class AuthenticationController implements AuthenticationControllerApi {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/password-recovery")
+    public ResponseEntity<Void> passwordRecoveryPut(@Valid @RequestBody ForgotPasswordRequest request) {
+        return passwordRecovery(request);
+    }
+
     @Override
     @GetMapping("/password-reset/validate")
     public ResponseEntity<TokenValidationResponse> validateResetToken(@RequestParam String token) {

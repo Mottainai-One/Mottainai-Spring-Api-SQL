@@ -67,6 +67,17 @@ class AuthenticationControllerTest {
     }
 
     @Test
+    @DisplayName("Should accept the documented PUT password recovery route")
+    void shouldAcceptPutPasswordRecoveryRequest() throws Exception {
+        mockMvc.perform(put("/api/v1/auth/password-recovery")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ForgotPasswordRequest("12345678901", "user@mottainai.com"))))
+                .andExpect(status().isNoContent());
+
+        verify(authenticationService).requestPasswordReset(any());
+    }
+
+    @Test
     @DisplayName("Should accept a valid password reset")
     void shouldAcceptAValidPasswordReset() throws Exception {
         mockMvc.perform(post("/api/v1/auth/password-reset")
