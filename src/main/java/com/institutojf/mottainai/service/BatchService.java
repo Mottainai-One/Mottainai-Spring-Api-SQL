@@ -11,6 +11,7 @@ import com.institutojf.mottainai.model.Product;
 import com.institutojf.mottainai.repository.BatchRepository;
 import com.institutojf.mottainai.repository.ProductRepository;
 import com.institutojf.mottainai.security.InventoryAccess;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,18 +19,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class BatchService {
     private final BatchRepository batchRepository;
     private final ProductRepository productRepository;
     private final BatchMapper batchMapper;
     private final InventoryAccess inventoryAccess;
-
-    public BatchService(BatchRepository batchRepository, ProductRepository productRepository, BatchMapper batchMapper, InventoryAccess inventoryAccess) {
-        this.batchRepository = batchRepository;
-        this.productRepository = productRepository;
-        this.batchMapper = batchMapper;
-        this.inventoryAccess = inventoryAccess;
-    }
 
     @Transactional
     public BatchResponse create(CreateBatchRequest request, Authentication authentication) {

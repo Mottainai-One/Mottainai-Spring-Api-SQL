@@ -8,21 +8,18 @@ import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import com.institutojf.mottainai.mapper.AddressMapper;
 import com.institutojf.mottainai.model.Address;
 import com.institutojf.mottainai.repository.AddressRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class AddressService {
 
     private final AddressRepository addressRepository;
     private final AddressMapper addressMapper;
-
-    public AddressService(AddressRepository addressRepository, AddressMapper addressMapper) {
-        this.addressRepository = addressRepository;
-        this.addressMapper = addressMapper;
-    }
 
     @Transactional
     public AddressResponse create(CreateAddressRequest request) {
