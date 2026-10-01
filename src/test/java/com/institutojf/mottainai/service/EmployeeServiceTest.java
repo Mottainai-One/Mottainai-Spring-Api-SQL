@@ -4,6 +4,7 @@ import com.institutojf.mottainai.dto.request.CreateEmployeeRequest;
 import com.institutojf.mottainai.dto.request.EmployeeStatusRequest;
 import com.institutojf.mottainai.dto.request.UpdateEmployeeRequest;
 import com.institutojf.mottainai.exception.BusinessException;
+import com.institutojf.mottainai.exception.InvitationDeliveryException;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.model.Company;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mail.MailSendException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionSynchronizationUtils;
@@ -35,42 +37,58 @@ import org.springframework.transaction.support.TransactionSynchronizationUtils;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class EmployeeServiceTest {
+
     @Mock
     private AppUserRepository appUserRepository;
+
     @Mock
     private EmployeeRepository employeeRepository;
+
     @Mock
     private EmployeeRoleRepository roleRepository;
+
     @Mock
     private RetailStoreRepository storeRepository;
+
     @Mock
     private EmployeeActivityRepository activityRepository;
+
     @Mock
     private EmployeeInvitationTokenRepository invitationRepository;
+
     @Mock
     private PasswordResetTokenRepository passwordResetTokenRepository;
+
     @Mock
     private StaffSessionRepository sessionRepository;
+
     @Mock
     private AuditLogRepository auditLogRepository;
+
     @Mock
     private PasswordResetEmailService emailService;
+
     @Mock
     private PasswordEncoder passwordEncoder;
+
     @Mock
     private TokenHashService tokenHashService;
+
+    @Mock
+    private StaffEmailFailureService emailFailureService;
+
     @Mock
     private EntityManager entityManager;
 
@@ -84,15 +102,14 @@ class EmployeeServiceTest {
     @Test
     @DisplayName("Should not activate employee before password is defined")
     void shouldNotActivateEmployeeBeforePasswordIsDefined() {
-        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, entityManager);
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
         AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
         AppUser invitedEmployee = user(2, "invite@example.com", "OPERATOR", false);
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull("admin@example.com"))
-                .thenReturn(Optional.of(administrator));
+            .thenReturn(Optional.of(administrator));
         when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(invitedEmployee));
-
-        assertThrows(BusinessException.class, () -> service.changeStatus(2,
-                new EmployeeStatusRequest(true), "admin@example.com"));
+        assertThrows(BusinessException.class,
+                () -> service.changeStatus(2, new EmployeeStatusRequest(true), "admin@example.com"));
         verify(employeeRepository, never()).save(any());
         verify(appUserRepository, never()).save(any());
         verify(entityManager).refresh(invitedEmployee, LockModeType.PESSIMISTIC_WRITE);
@@ -101,25 +118,20 @@ class EmployeeServiceTest {
     @Test
     @DisplayName("Should reject employee activation when role or store is inactive")
     void shouldRejectActivationWithInactiveRoleOrStore() {
-        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository,
-                storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository,
-                sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, entityManager);
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
         AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
         AppUser employee = user(2, "employee@example.com", "OPERATOR", true);
         employee.getEmployee().getStore().setActive(true);
         employee.getEmployee().getRole().setActive(false);
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(administrator.getEmail()))
-                .thenReturn(Optional.of(administrator));
+            .thenReturn(Optional.of(administrator));
         when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(employee));
-
-        assertThrows(BusinessException.class, () -> service.changeStatus(2,
-                new EmployeeStatusRequest(true), administrator.getEmail()));
-
+        assertThrows(BusinessException.class,
+                () -> service.changeStatus(2, new EmployeeStatusRequest(true), administrator.getEmail()));
         employee.getEmployee().getRole().setActive(true);
         employee.getEmployee().getStore().setActive(false);
-        assertThrows(BusinessException.class, () -> service.changeStatus(2,
-                new EmployeeStatusRequest(true), administrator.getEmail()));
-
+        assertThrows(BusinessException.class,
+                () -> service.changeStatus(2, new EmployeeStatusRequest(true), administrator.getEmail()));
         verify(employeeRepository, never()).save(any());
         verify(appUserRepository, never()).save(any());
     }
@@ -127,19 +139,15 @@ class EmployeeServiceTest {
     @Test
     @DisplayName("Should invalidate recovery and invitation tokens when disabling an employee")
     void shouldInvalidateTokensWhenDisablingEmployee() {
-        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository,
-                storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository,
-                sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, entityManager);
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
         AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
         AppUser employee = user(2, "employee@example.com", "OPERATOR", true);
         employee.setActive(true);
         employee.getEmployee().setActive(true);
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(administrator.getEmail()))
-                .thenReturn(Optional.of(administrator));
+            .thenReturn(Optional.of(administrator));
         when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(employee));
-
         var response = service.changeStatus(2, new EmployeeStatusRequest(false), administrator.getEmail());
-
         assertFalse(response.active());
         verify(passwordResetTokenRepository).invalidateUnusedForUser(eq(2), any(OffsetDateTime.class));
         verify(invitationRepository).invalidateUnusedForUser(2);
@@ -149,45 +157,155 @@ class EmployeeServiceTest {
     }
 
     @Test
-    @DisplayName("Should invalidate old email tokens and send new invitation when email changes")
-    void shouldInvalidateOldEmailTokensAndSendNewInvitationWhenEmailChanges() {
-        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, entityManager);
+    @DisplayName("Should cancel invitation when disabling an employee without a password")
+    void shouldCancelInvitationForInvitedEmployee() {
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
         AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
-        AppUser invitedEmployee = user(2, "old@example.com", "OPERATOR", false);
-        invitedEmployee.getEmployee().setName("Employee");
-        invitedEmployee.getEmployee().setCpf("12345678901");
-        invitedEmployee.getEmployee().setEmail("old@example.com");
-        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull("admin@example.com"))
-                .thenReturn(Optional.of(administrator));
+        AppUser invitedEmployee = user(2, "invite@example.com", "OPERATOR", false);
+        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(administrator.getEmail()))
+            .thenReturn(Optional.of(administrator));
+        when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(invitedEmployee));
+        service.changeStatus(2, new EmployeeStatusRequest(false), administrator.getEmail());
+        verify(invitationRepository).invalidateUnusedForUser(2);
+        verify(emailService, never()).sendInvitationLink(any(), any());
+        assertFalse(invitedEmployee.getActive());
+        assertFalse(invitedEmployee.getEmployee().getActive());
+    }
+
+    @Test
+    @DisplayName("Should let an administrator issue a new invitation after cancellation")
+    void shouldResendInvitationForInactiveEmployeeWithoutPassword() {
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
+        AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
+        AppUser invitedEmployee = user(2, "invite@example.com", "OPERATOR", false);
+        invitedEmployee.getEmployee().getRole().setActive(true);
+        invitedEmployee.getEmployee().getStore().setActive(true);
+        invitedEmployee.getEmployee().getStore().getCompany().setActive(true);
+        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(administrator.getEmail()))
+            .thenReturn(Optional.of(administrator));
         when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(invitedEmployee));
         when(tokenHashService.newToken()).thenReturn("new-invite-token");
         when(tokenHashService.hash("new-invite-token")).thenReturn("new-token-hash");
         TransactionSynchronizationManager.initSynchronization();
+        service.resendInvitation(2, administrator.getEmail());
+        verify(passwordResetTokenRepository).invalidateUnusedForUser(eq(2), any(OffsetDateTime.class));
+        verify(invitationRepository).invalidateUnusedForUser(2);
+        verify(invitationRepository).create(eq(2), eq("new-token-hash"), any(OffsetDateTime.class));
+        verify(emailService, never()).sendInvitationLink(any(), any());
+        TransactionSynchronizationUtils.triggerAfterCommit();
+        verify(emailService).sendInvitationLink("invite@example.com", "new-invite-token");
+    }
 
-        service.update(2, new UpdateEmployeeRequest("Employee", "12345678901",
-                "new@example.com", null, null), "admin@example.com");
+    @Test
+    @DisplayName("Should invalidate invitation and report email failure after commit")
+    void shouldInvalidateInvitationWhenEmailFails() {
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
+        AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
+        AppUser invitedEmployee = user(2, "invite@example.com", "OPERATOR", false);
+        invitedEmployee.getEmployee().getRole().setActive(true);
+        invitedEmployee.getEmployee().getStore().setActive(true);
+        invitedEmployee.getEmployee().getStore().getCompany().setActive(true);
+        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(administrator.getEmail()))
+            .thenReturn(Optional.of(administrator));
+        when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(invitedEmployee));
+        when(tokenHashService.newToken()).thenReturn("new-invite-token");
+        when(tokenHashService.hash("new-invite-token")).thenReturn("new-token-hash");
+        doThrow(new MailSendException("SMTP unavailable")).when(emailService)
+            .sendInvitationLink("invite@example.com", "new-invite-token");
+        TransactionSynchronizationManager.initSynchronization();
+        service.resendInvitation(2, administrator.getEmail());
+        assertThrows(InvitationDeliveryException.class, TransactionSynchronizationUtils::triggerAfterCommit);
+        verify(emailFailureService).invalidateInvitationToken("new-token-hash");
+        assertFalse(Boolean.TRUE.equals(invitedEmployee.getActive()));
+    }
+
+    @Test
+    @DisplayName("Should not invite an employee whose password is already set")
+    void shouldRejectInvitationForEmployeeWithPassword() {
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
+        AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
+        AppUser employee = user(2, "employee@example.com", "OPERATOR", true);
+        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(administrator.getEmail()))
+            .thenReturn(Optional.of(administrator));
+        when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(employee));
+        assertThrows(BusinessException.class, () -> service.resendInvitation(2, administrator.getEmail()));
+        verify(invitationRepository, never()).create(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Should not issue an invitation when the employee role is inactive")
+    void shouldRejectInvitationForInactiveRole() {
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
+        AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
+        AppUser invitedEmployee = user(2, "invite@example.com", "OPERATOR", false);
+        invitedEmployee.getEmployee().getRole().setActive(false);
+        invitedEmployee.getEmployee().getStore().setActive(true);
+        invitedEmployee.getEmployee().getStore().getCompany().setActive(true);
+        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(administrator.getEmail()))
+            .thenReturn(Optional.of(administrator));
+        when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(invitedEmployee));
+        assertThrows(BusinessException.class, () -> service.resendInvitation(2, administrator.getEmail()));
+        verify(invitationRepository, never()).invalidateUnusedForUser(2);
+        verify(invitationRepository, never()).create(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Should limit repeated pending invitations")
+    void shouldLimitRepeatedInvitation() {
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
+        AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
+        AppUser invitedEmployee = user(2, "invite@example.com", "OPERATOR", false);
+        invitedEmployee.getEmployee().getRole().setActive(true);
+        invitedEmployee.getEmployee().getStore().setActive(true);
+        invitedEmployee.getEmployee().getStore().getCompany().setActive(true);
+        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(administrator.getEmail()))
+            .thenReturn(Optional.of(administrator));
+        when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(invitedEmployee));
+        when(invitationRepository.hasPendingForUser(2)).thenReturn(true);
+        when(invitationRepository.hasRecentForUser(eq(2), any(OffsetDateTime.class))).thenReturn(true);
+        assertThrows(BusinessException.class, () -> service.resendInvitation(2, administrator.getEmail()));
+        verify(invitationRepository, never()).invalidateUnusedForUser(2);
+        verify(invitationRepository, never()).create(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Should invalidate old email tokens and send new invitation when email changes")
+    void shouldInvalidateOldEmailTokensAndSendNewInvitationWhenEmailChanges() {
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
+        AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
+        AppUser invitedEmployee = user(2, "old@example.com", "OPERATOR", false);
+
+        invitedEmployee.getEmployee().setName("Employee");
+        invitedEmployee.getEmployee().setCpf("12345678901");
+        invitedEmployee.getEmployee().setEmail("old@example.com");
+
+        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull("admin@example.com"))
+            .thenReturn(Optional.of(administrator));
+        when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(invitedEmployee));
+        when(tokenHashService.newToken()).thenReturn("new-invite-token");
+        when(tokenHashService.hash("new-invite-token")).thenReturn("new-token-hash");
+        TransactionSynchronizationManager.initSynchronization();
+        service.update(2, new UpdateEmployeeRequest("Employee", "12345678901", "new@example.com", null, null), "admin@example.com");
 
         verify(passwordResetTokenRepository).invalidateUnusedForUser(eq(2), any(OffsetDateTime.class));
         verify(invitationRepository).invalidateUnusedForUser(2);
         verify(sessionRepository).revokeAllForUser(2);
-        verify(invitationRepository).create(any(UUID.class), eq(2), eq("new-token-hash"), any(OffsetDateTime.class));
+        verify(invitationRepository).create(eq(2), eq("new-token-hash"), any(OffsetDateTime.class));
     }
 
     @Test
     @DisplayName("Should reject manager updates to employee records")
     void shouldRejectManagerEmployeeUpdate() {
-        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository,
-                storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository,
-                sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, entityManager);
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
         AppUser manager = user(1, "manager@example.com", "MANAGER", true);
         AppUser employee = user(2, "employee@example.com", "OPERATOR", true);
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(manager.getEmail()))
-                .thenReturn(Optional.of(manager));
+            .thenReturn(Optional.of(manager));
         when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(employee));
-
-        assertThrows(ResourceNotFoundException.class, () -> service.update(2,
-                new UpdateEmployeeRequest("Employee", "12345678901", "employee@example.com", null, null),
-                manager.getEmail()));
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.update(2,
+                        new UpdateEmployeeRequest("Employee", "12345678901", "employee@example.com", null, null),
+                        manager.getEmail()));
 
         verify(appUserRepository, never()).findByIdWithWriteLock(any());
         verify(employeeRepository, never()).save(any());
@@ -196,18 +314,18 @@ class EmployeeServiceTest {
     @Test
     @DisplayName("Should create an inactive employee and send the invitation after commit")
     void shouldCreateInactiveEmployeeWithInvitation() {
-        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository,
-                storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository,
-                sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, entityManager);
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
         AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
+
         EmployeeRole employeeRole = new EmployeeRole();
         employeeRole.setId(3);
         employeeRole.setName("OPERATOR");
         employeeRole.setActive(true);
+
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(administrator.getEmail()))
-                .thenReturn(Optional.of(administrator));
+            .thenReturn(Optional.of(administrator));
         when(storeRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1))
-                .thenReturn(Optional.of(administrator.getEmployee().getStore()));
+            .thenReturn(Optional.of(administrator.getEmployee().getStore()));
         when(roleRepository.findByIdAndDeletedAtIsNull(3)).thenReturn(Optional.of(employeeRole));
         when(tokenHashService.newToken()).thenReturn("temporary-password", "invitation-token");
         when(tokenHashService.hash("invitation-token")).thenReturn("invitation-hash");
@@ -223,12 +341,11 @@ class EmployeeServiceTest {
             return savedUser;
         });
         TransactionSynchronizationManager.initSynchronization();
-
-        var response = service.create(new CreateEmployeeRequest("Employee", "12345678901",
-                "employee@example.com", null, 3, 1, LocalDate.now()), administrator.getEmail());
-
+        var response = service.create(new CreateEmployeeRequest("Employee", "12345678901", "employee@example.com", null,
+                3, 1, LocalDate.now()), administrator.getEmail());
         assertFalse(response.active());
-        verify(invitationRepository).create(any(UUID.class), eq(2), eq("invitation-hash"), any(OffsetDateTime.class));
+
+        verify(invitationRepository).create(eq(2), eq("invitation-hash"), any(OffsetDateTime.class));
         verify(emailService, never()).sendInvitationLink(any(), any());
         TransactionSynchronizationUtils.triggerAfterCommit();
         verify(emailService).sendInvitationLink("employee@example.com", "invitation-token");
@@ -253,4 +370,5 @@ class EmployeeServiceTest {
         user.setPasswordSet(passwordSet);
         return user;
     }
+
 }

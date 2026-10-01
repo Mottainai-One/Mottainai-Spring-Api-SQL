@@ -8,6 +8,7 @@ import com.institutojf.mottainai.dto.response.EmployeeResponse;
 import com.institutojf.mottainai.dto.response.EmployeeShiftResponse;
 import com.institutojf.mottainai.exception.BusinessException;
 import com.institutojf.mottainai.exception.ConflictException;
+import com.institutojf.mottainai.exception.InvitationDeliveryException;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.model.Employee;
@@ -40,31 +41,45 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmployeeService {
+
     private final AppUserRepository appUserRepository;
+
     private final EmployeeRepository employeeRepository;
+
     private final EmployeeRoleRepository roleRepository;
+
     private final RetailStoreRepository storeRepository;
+
     private final EmployeeActivityRepository activityRepository;
+
     private final EmployeeInvitationTokenRepository invitationRepository;
+
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+
     private final StaffSessionRepository sessionRepository;
+
     private final AuditLogRepository auditLogRepository;
+
     private final PasswordResetEmailService emailService;
+
     private final PasswordEncoder passwordEncoder;
+
     private final TokenHashService tokenHashService;
+
+    private final StaffEmailFailureService emailFailureService;
+
     private final EntityManager entityManager;
 
     @Transactional
     public EmployeeResponse create(CreateEmployeeRequest request, String requestingUserEmail) {
         AppUser requestingUser = requestingUser(requestingUserEmail);
         RetailStore store = storeRepository.findByIdAndActiveTrueAndDeletedAtIsNull(request.storeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Store not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Store not found"));
         if (!store.getCompany().getId().equals(requestingUser.getEmployee().getStore().getCompany().getId())) {
             throw new ResourceNotFoundException("Store not found");
         }
@@ -74,7 +89,6 @@ public class EmployeeService {
         if (appUserRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull(request.email())) {
             throw new ConflictException("Email already exists");
         }
-
         Employee employee = new Employee();
         employee.setStore(store);
         employee.setRole(role(request.roleId()));
@@ -85,18 +99,15 @@ public class EmployeeService {
         employee.setHireDate(request.hireDate());
         employee.setActive(false);
         employee = employeeRepository.saveAndFlush(employee);
-
         AppUser user = new AppUser();
         user.setEmployee(employee);
         user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(tokenHashService.newToken()));
-        user.setTokenVersion(0);
         user.setPasswordSet(false);
         user.setActive(false);
         user = appUserRepository.saveAndFlush(user);
-
         String rawToken = tokenHashService.newToken();
-        invitationRepository.create(UUID.randomUUID(), user.getId(), tokenHashService.hash(rawToken),
+        invitationRepository.create(user.getId(), tokenHashService.hash(rawToken),
                 OffsetDateTime.now(ZoneOffset.UTC).plusHours(48));
         auditLogRepository.record("employee", "INSERT", employee.getId().toString(), requestingUser.getId(), null,
                 Map.of("name", employee.getName(), "store_id", store.getId(), "role_id", employee.getRole().getId()));
@@ -110,7 +121,9 @@ public class EmployeeService {
     public List<EmployeeResponse> listStore(String requestingUserEmail) {
         AppUser requestingUser = requestingUser(requestingUserEmail);
         return appUserRepository.findEmployeesByStore(requestingUser.getEmployee().getStore().getId())
-                .stream().map(this::response).toList();
+            .stream()
+            .map(this::response)
+            .toList();
     }
 
     @Transactional(readOnly = true)
@@ -131,8 +144,7 @@ public class EmployeeService {
         AppUser user = target(employeeId, requestingUser, true);
         Employee employee = user.getEmployee();
         boolean emailChanged = !user.getEmail().equalsIgnoreCase(request.email());
-        if (emailChanged
-                && appUserRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull(request.email())) {
+        if (emailChanged && appUserRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull(request.email())) {
             throw new ConflictException("Email already exists");
         }
         if (!employee.getCpf().equals(request.cpf()) && employeeRepository.existsByCpf(request.cpf())) {
@@ -158,7 +170,7 @@ public class EmployeeService {
             sessionRepository.revokeAllForUser(user.getId());
             if (!Boolean.TRUE.equals(user.getPasswordSet())) {
                 String rawToken = tokenHashService.newToken();
-                invitationRepository.create(UUID.randomUUID(), user.getId(), tokenHashService.hash(rawToken),
+                invitationRepository.create(user.getId(), tokenHashService.hash(rawToken),
                         OffsetDateTime.now(ZoneOffset.UTC).plusHours(48));
                 scheduleInvitationEmail(user.getEmail(), rawToken, employeeId);
             }
@@ -220,6 +232,36 @@ public class EmployeeService {
         return response(user);
     }
 
+    @Transactional
+    public EmployeeResponse resendInvitation(Integer employeeId, String requestingUserEmail) {
+        AppUser requestingUser = requestingUser(requestingUserEmail);
+        AppUser user = target(employeeId, requestingUser, true);
+        if (Boolean.TRUE.equals(user.getPasswordSet()) || Boolean.TRUE.equals(user.getActive())
+                || Boolean.TRUE.equals(user.getEmployee().getActive())) {
+            throw new BusinessException("Only an inactive employee without a password can be invited again");
+        }
+        Employee employee = user.getEmployee();
+        if (!Boolean.TRUE.equals(employee.getRole().getActive()) || employee.getRole().getDeletedAt() != null
+                || !Boolean.TRUE.equals(employee.getStore().getActive()) || employee.getStore().getDeletedAt() != null
+                || !Boolean.TRUE.equals(employee.getStore().getCompany().getActive())
+                || employee.getStore().getCompany().getDeletedAt() != null) {
+            throw new BusinessException("The employee's role, store and company must be active before inviting again");
+        }
+        if (invitationRepository.hasPendingForUser(user.getId()) && invitationRepository.hasRecentForUser(user.getId(),
+                OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(5))) {
+            throw new BusinessException("Wait five minutes before sending another invitation");
+        }
+        passwordResetTokenRepository.invalidateUnusedForUser(user.getId(), OffsetDateTime.now(ZoneOffset.UTC));
+        invitationRepository.invalidateUnusedForUser(user.getId());
+        String rawToken = tokenHashService.newToken();
+        invitationRepository.create(user.getId(), tokenHashService.hash(rawToken),
+                OffsetDateTime.now(ZoneOffset.UTC).plusHours(48));
+        auditLogRepository.record("app_user", "UPDATE", user.getId().toString(), requestingUser.getId(), null,
+                Map.of("invitation_issued", true));
+        scheduleInvitationEmail(user.getEmail(), rawToken, employeeId);
+        return response(user);
+    }
+
     @Transactional(readOnly = true)
     public List<EmployeeShiftResponse> shifts(Integer employeeId, LocalDateTime from, LocalDateTime to, String requestingUserEmail) {
         requireActivityAccess(employeeId, requestingUserEmail);
@@ -236,7 +278,7 @@ public class EmployeeService {
 
     private AppUser requestingUser(String email) {
         return appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     private void requireActivityAccess(Integer employeeId, String requestingUserEmail) {
@@ -250,7 +292,7 @@ public class EmployeeService {
 
     private AppUser target(Integer employeeId, AppUser requestingUser, boolean write) {
         AppUser found = appUserRepository.findByEmployeeId(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         if (write) {
             entityManager.refresh(found, LockModeType.PESSIMISTIC_WRITE);
             entityManager.refresh(found.getEmployee(), LockModeType.PESSIMISTIC_WRITE);
@@ -262,7 +304,10 @@ public class EmployeeService {
         Integer targetCompany = found.getEmployee().getStore().getCompany().getId();
         boolean administrator = "ADMINISTRATOR".equalsIgnoreCase(requestingUser.getEmployee().getRole().getName());
         boolean manager = "MANAGER".equalsIgnoreCase(requestingUser.getEmployee().getRole().getName());
-        boolean sameStore = requestingUser.getEmployee().getStore().getId().equals(found.getEmployee().getStore().getId());
+        boolean sameStore = requestingUser.getEmployee()
+            .getStore()
+            .getId()
+            .equals(found.getEmployee().getStore().getId());
         boolean self = requestingUser.getId().equals(found.getId());
         if (!requestingUserCompany.equals(targetCompany) || (write && !administrator)
                 || (!administrator && !(manager && sameStore) && !self)) {
@@ -273,8 +318,8 @@ public class EmployeeService {
 
     private EmployeeRole role(Integer roleId) {
         return roleRepository.findByIdAndDeletedAtIsNull(roleId)
-                .filter(found -> Boolean.TRUE.equals(found.getActive()))
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
+            .filter(found -> Boolean.TRUE.equals(found.getActive()))
+            .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
     }
 
     private void validateRange(LocalDateTime from, LocalDateTime to) {
@@ -286,8 +331,8 @@ public class EmployeeService {
     private EmployeeResponse response(AppUser user) {
         Employee employee = user.getEmployee();
         return new EmployeeResponse(employee.getId(), user.getId(), employee.getName(), maskCpf(employee.getCpf()),
-                user.getEmail(), employee.getPhone(), employee.getRole().getName(),
-                employee.getStore().getId(), user.getActive(), user.getLastLogin());
+                user.getEmail(), employee.getPhone(), employee.getRole().getName(), employee.getStore().getId(),
+                user.getActive(), user.getLastLogin());
     }
 
     private Map<String, Object> employeeAuditData(Employee employee) {
@@ -305,15 +350,26 @@ public class EmployeeService {
     }
 
     private void scheduleInvitationEmail(String email, String rawToken, Integer employeeId) {
+        String tokenHash = tokenHashService.hash(rawToken);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 try {
                     emailService.sendInvitationLink(email, rawToken);
-                } catch (MailException exception) {
+                }
+                catch (MailException exception) {
                     log.error("Invitation email delivery failed for employee {}", employeeId, exception);
+                    try {
+                        emailFailureService.invalidateInvitationToken(tokenHash);
+                    }
+                    catch (RuntimeException cleanupException) {
+                        log.error("Could not invalidate undelivered invitation for employee {}", employeeId,
+                                cleanupException);
+                    }
+                    throw new InvitationDeliveryException(employeeId, exception);
                 }
             }
         });
     }
+
 }
