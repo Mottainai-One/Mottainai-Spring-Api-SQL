@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
 
 import lombok.Getter;
@@ -19,6 +20,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "loyalty_redemption")
 public class LoyaltyRedemption {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "redemption_id")
@@ -40,4 +42,5 @@ public class LoyaltyRedemption {
 
     @Column(nullable = false, length = 20)
     private String status = "CONFIRMED";
+
 }

@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
 
 import lombok.Getter;
@@ -19,6 +20,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "loyalty_transaction")
 public class LoyaltyTransaction {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "loyalty_transaction_id")
@@ -27,6 +29,7 @@ public class LoyaltyTransaction {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "loyalty_account_id", nullable = false)
     private LoyaltyAccount loyaltyAccount;
+
     @Column(name = "sale_id")
     private Integer saleId;
 
@@ -41,4 +44,5 @@ public class LoyaltyTransaction {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
 }

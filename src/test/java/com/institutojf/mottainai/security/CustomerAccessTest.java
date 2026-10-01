@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CustomerAccessTest {
+
     @Mock
     private CustomerRepository customerRepository;
 
@@ -26,11 +27,12 @@ class CustomerAccessTest {
     void shouldResolveActiveCustomerFromFirebaseSubject() {
         Customer customer = new Customer();
         customer.setId(7);
+
         TestingAuthenticationToken authentication = new TestingAuthenticationToken("firebase-uid", null);
         authentication.setAuthenticated(true);
-        when(customerRepository.findByExternalAuthUidAndActiveTrueAndDeletedAtIsNull("firebase-uid"))
-                .thenReturn(Optional.of(customer));
 
+        when(customerRepository.findByExternalAuthUidAndActiveTrueAndDeletedAtIsNull("firebase-uid"))
+            .thenReturn(Optional.of(customer));
         Customer result = new CustomerAccess(customerRepository).currentCustomer(authentication);
 
         assertEquals(7, result.getId());
@@ -42,9 +44,10 @@ class CustomerAccessTest {
         TestingAuthenticationToken authentication = new TestingAuthenticationToken("firebase-uid", null);
         authentication.setAuthenticated(true);
         when(customerRepository.findByExternalAuthUidAndActiveTrueAndDeletedAtIsNull("firebase-uid"))
-                .thenReturn(Optional.empty());
+            .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
                 () -> new CustomerAccess(customerRepository).currentCustomer(authentication));
     }
+
 }

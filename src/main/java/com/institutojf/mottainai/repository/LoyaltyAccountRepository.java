@@ -16,7 +16,7 @@ public interface LoyaltyAccountRepository extends JpaRepository<LoyaltyAccount, 
     Optional<LoyaltyAccount> findByCustomer_Id(Integer customerId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT account FROM LoyaltyAccount ACCOUNT where ACCOUNT.customer.id = :customerId")
+    @Query("SELECT account FROM LoyaltyAccount account where account.customer.id = :customerId")
     Optional<LoyaltyAccount> findByCustomerIdForUpdate(@Param("customerId") Integer customerId);
 
 }
