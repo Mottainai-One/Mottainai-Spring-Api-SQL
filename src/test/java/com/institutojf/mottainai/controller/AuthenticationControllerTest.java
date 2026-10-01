@@ -56,57 +56,39 @@ class AuthenticationControllerTest {
     }
 
     @Test
-    @DisplayName("Should accept a password recovery request")
-    void shouldAcceptAPasswordRecoveryRequest() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/password-recovery")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new ForgotPasswordRequest("12345678901", "user@mottainai.com"))))
-                .andExpect(status().isNoContent());
-
-        verify(authenticationService).requestPasswordReset(any());
-    }
-
-    @Test
     @DisplayName("Should accept the documented PUT password recovery route")
     void shouldAcceptPutPasswordRecoveryRequest() throws Exception {
-        mockMvc.perform(put("/api/v1/auth/password-recovery")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new ForgotPasswordRequest("12345678901", "user@mottainai.com"))))
-                .andExpect(status().isNoContent());
-
+        mockMvc
+            .perform(put("/api/v1/auth/password-recovery").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper
+                    .writeValueAsString(new ForgotPasswordRequest("12345678901", "user@mottainai.com"))))
+            .andExpect(status().isNoContent());
         verify(authenticationService).requestPasswordReset(any());
     }
 
     @Test
     @DisplayName("Should accept a valid password reset")
     void shouldAcceptAValidPasswordReset() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/password-reset")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "token": "valid-reset-token",
-                                  "newPassword": "New-Password@42"
-                                }
-                                """))
-                .andExpect(status().isNoContent());
-
+        mockMvc.perform(post("/api/v1/auth/password-reset").contentType(MediaType.APPLICATION_JSON).content("""
+                {
+                  "token": "valid-reset-token",
+                  "newPassword": "New-Password@42"
+                }
+                """)).andExpect(status().isNoContent());
         verify(authenticationService).resetPassword(any());
     }
 
     @Test
     @DisplayName("Should return access and refresh tokens for CPF login")
     void shouldLoginByCpf() throws Exception {
-        when(authenticationService.login(any())).thenReturn(new TokenResponse("access", "refresh", "Bearer", 3600, 604800));
-
-        mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"cpf":"12345678901","password":"Strong@Password42"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("access"))
-                .andExpect(jsonPath("$.refreshToken").value("refresh"));
-
+        when(authenticationService.login(any()))
+            .thenReturn(new TokenResponse("access", "refresh", "Bearer", 3600, 604800));
+        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
+                {"cpf":"12345678901","password":"Strong@Password42"}
+                """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").value("access"))
+            .andExpect(jsonPath("$.refreshToken").value("refresh"));
         verify(authenticationService).login(any());
     }
 
@@ -114,14 +96,12 @@ class AuthenticationControllerTest {
     @DisplayName("Should rotate tokens through refresh route")
     void shouldRefreshTokens() throws Exception {
         when(authenticationService.refresh("old-refresh"))
-                .thenReturn(new TokenResponse("new-access", "new-refresh", "Bearer", 3600, 604800));
-
-        mockMvc.perform(post("/api/v1/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"old-refresh\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.refreshToken").value("new-refresh"));
-
+            .thenReturn(new TokenResponse("new-access", "new-refresh", "Bearer", 3600, 604800));
+        mockMvc
+            .perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"old-refresh\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.refreshToken").value("new-refresh"));
         verify(authenticationService).refresh("old-refresh");
     }
 
@@ -129,45 +109,41 @@ class AuthenticationControllerTest {
     @DisplayName("Should use the access token session when logging out")
     void shouldLogoutMatchingSession() throws Exception {
         UUID sessionId = UUID.randomUUID();
-        Jwt jwt = new Jwt("access", Instant.now(), Instant.now().plusSeconds(60),
-                Map.of("alg", "HS256"), Map.of("sub", "admin@example.com", "sid", sessionId.toString()));
-
-        mockMvc.perform(post("/api/v1/auth/logout")
-                        .principal(new JwtAuthenticationToken(jwt))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"refresh\"}"))
-                .andExpect(status().isNoContent());
-
+        Jwt jwt = new Jwt("access", Instant.now(), Instant.now().plusSeconds(60), Map.of("alg", "HS256"),
+                Map.of("sub", "admin@example.com", "sid", sessionId.toString()));
+        mockMvc
+            .perform(post("/api/v1/auth/logout").principal(new JwtAuthenticationToken(jwt))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"refresh\"}"))
+            .andExpect(status().isNoContent());
         verify(authenticationService).logout("refresh", "admin@example.com", sessionId);
     }
 
     @Test
     @DisplayName("Should return the current profile")
     void shouldReturnProfile() throws Exception {
-        when(userProfileService.me("admin@example.com"))
-                .thenReturn(new UserResponse(1, "Admin", "***456789**", "admin@example.com", null,
-                        "ADMINISTRATOR", true, 1));
-
-        mockMvc.perform(get("/api/v1/auth/profile")
-                        .principal(new UsernamePasswordAuthenticationToken("admin@example.com", null)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("admin@example.com"))
-                .andExpect(jsonPath("$.cpf").value("***456789**"));
-
+        when(userProfileService.me("admin@example.com")).thenReturn(
+                new UserResponse(1, "Admin", "***456789**", "admin@example.com", null, "ADMINISTRATOR", true, 1));
+        mockMvc
+            .perform(get("/api/v1/auth/profile")
+                .principal(new UsernamePasswordAuthenticationToken("admin@example.com", null)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.email").value("admin@example.com"))
+            .andExpect(jsonPath("$.cpf").value("***456789**"));
         verify(userProfileService).me("admin@example.com");
     }
 
     @Test
     @DisplayName("Should send a password change for the authenticated user")
     void shouldChangePassword() throws Exception {
-        mockMvc.perform(put("/api/v1/auth/password")
-                        .principal(new UsernamePasswordAuthenticationToken("admin@example.com", null))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"currentPassword":"Old@Password42","newPassword":"New@Password42"}
-                                """))
-                .andExpect(status().isNoContent());
-
+        mockMvc
+            .perform(put("/api/v1/auth/password")
+                .principal(new UsernamePasswordAuthenticationToken("admin@example.com", null))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"currentPassword":"Old@Password42","newPassword":"New@Password42"}
+                        """))
+            .andExpect(status().isNoContent());
         verify(authenticationService).changePassword(any(), eq("admin@example.com"));
     }
 

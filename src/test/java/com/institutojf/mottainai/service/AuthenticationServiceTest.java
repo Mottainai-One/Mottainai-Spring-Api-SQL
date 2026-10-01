@@ -11,6 +11,7 @@ import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.model.Employee;
 import com.institutojf.mottainai.model.EmployeeRole;
 import com.institutojf.mottainai.model.PasswordResetToken;
+import com.institutojf.mottainai.model.enums.PasswordTokenType;
 import com.institutojf.mottainai.repository.AppUserRepository;
 import com.institutojf.mottainai.repository.AuditLogRepository;
 import com.institutojf.mottainai.repository.EmployeeInvitationTokenRepository;
@@ -48,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -60,36 +61,52 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthenticationServiceTest {
+
     @Mock
     private AuthenticationManager authenticationManager;
+
     @Mock
     private AppUserRepository appUserRepository;
+
     @Mock
     private EmployeeRepository employeeRepository;
+
     @Mock
     private PasswordResetTokenRepository passwordResetTokenRepository;
+
     @Mock
     private EmployeeInvitationTokenRepository invitationTokenRepository;
+
     @Mock
     private StaffSessionRepository staffSessionRepository;
+
     @Mock
     private AuditLogRepository auditLogRepository;
+
     @Mock
     private PasswordResetEmailService passwordResetEmailService;
+
     @Mock
     private StaffEmailFailureService emailFailureService;
+
     @Mock
     private RlsContextService rlsContextService;
+
     @Mock
     private TokenHashService tokenHashService;
+
     @Mock
     private JwtService jwtService;
+
     @Mock
     private JwtDecoder jwtDecoder;
+
     @Mock
     private JwtProperties jwtProperties;
+
     @Mock
     private PasswordEncoder passwordEncoder;
+
     @Mock
     private EntityManager entityManager;
 
@@ -97,12 +114,10 @@ class AuthenticationServiceTest {
 
     @BeforeEach
     void setUp() {
-        authenticationService = new AuthenticationService(authenticationManager, appUserRepository,
-                employeeRepository, passwordResetTokenRepository, invitationTokenRepository,
-                staffSessionRepository, auditLogRepository, passwordResetEmailService,
-                emailFailureService, rlsContextService, tokenHashService, jwtService,
-                jwtDecoder, jwtProperties, new PasswordProperties("mottainai,2026"), passwordEncoder,
-                entityManager);
+        authenticationService = new AuthenticationService(authenticationManager, appUserRepository, employeeRepository,
+                passwordResetTokenRepository, invitationTokenRepository, staffSessionRepository, auditLogRepository,
+                passwordResetEmailService, emailFailureService, rlsContextService, tokenHashService, jwtService,
+                jwtDecoder, jwtProperties, new PasswordProperties("mottainai,2026"), passwordEncoder, entityManager);
     }
 
     @AfterEach
@@ -126,16 +141,13 @@ class AuthenticationServiceTest {
         employee.setRole(role);
         user.setEmployee(employee);
         user.setActive(true);
-        TestingAuthenticationToken authentication =
-                new TestingAuthenticationToken(user.getEmail(), null, "ROLE_MANAGER");
+        TestingAuthenticationToken authentication = new TestingAuthenticationToken(user.getEmail(), null, "ROLE_MANAGER");
         when(authenticationManager.authenticate(any())).thenReturn(authentication);
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(user.getEmail()))
-                .thenReturn(Optional.of(user));
+            .thenReturn(Optional.of(user));
         when(passwordEncoder.matches(request.password(), user.getPasswordHash())).thenReturn(true);
-        when(jwtService.generateRefreshToken(any(), eq(2), any(UUID.class), eq(7L)))
-                .thenReturn("refresh-token");
-        when(jwtService.generateAccessToken(any(), eq(2), any(UUID.class)))
-                .thenReturn("access-token");
+        when(jwtService.generateRefreshToken(any(), any(UUID.class), eq(7L))).thenReturn("refresh-token");
+        when(jwtService.generateAccessToken(any(), any(UUID.class))).thenReturn("access-token");
         when(tokenHashService.hash("refresh-token")).thenReturn("refresh-hash");
         when(jwtProperties.expirationMinutes()).thenReturn(60L);
         when(jwtProperties.refreshExpirationDays()).thenReturn(7L);
@@ -146,15 +158,12 @@ class AuthenticationServiceTest {
         assertEquals("refresh-token", response.refreshToken());
         assertEquals("Bearer", response.tokenType());
         assertEquals(3600, response.expiresIn());
-        verify(staffSessionRepository).create(any(UUID.class), eq(user.getId()),
-                eq("refresh-hash"), any());
+        verify(staffSessionRepository).create(any(UUID.class), eq(user.getId()), eq("refresh-hash"), any());
         verify(entityManager).refresh(user, LockModeType.PESSIMISTIC_WRITE);
         verify(entityManager).refresh(employee, LockModeType.PESSIMISTIC_WRITE);
         verify(appUserRepository).updateLastLogin(eq(user.getId()), any());
         verify(appUserRepository, never()).save(user);
-        verify(authenticationManager).authenticate(argThat(candidate ->
-                candidate instanceof UsernamePasswordAuthenticationToken
-                        && request.cpf().equals(candidate.getPrincipal())));
+        verify(authenticationManager).authenticate(argThat(candidate -> candidate instanceof UsernamePasswordAuthenticationToken && request.cpf().equals(candidate.getPrincipal())));
     }
 
     @Test
@@ -172,9 +181,9 @@ class AuthenticationServiceTest {
         user.setEmployee(employee);
         user.setActive(true);
         when(authenticationManager.authenticate(any()))
-                .thenReturn(new TestingAuthenticationToken(user.getEmail(), null, "ROLE_MANAGER"));
+            .thenReturn(new TestingAuthenticationToken(user.getEmail(), null, "ROLE_MANAGER"));
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(user.getEmail()))
-                .thenReturn(Optional.of(user));
+            .thenReturn(Optional.of(user));
 
         assertThrows(BadCredentialsException.class, () -> authenticationService.login(request));
 
@@ -200,9 +209,9 @@ class AuthenticationServiceTest {
         user.setEmployee(employee);
         user.setActive(true);
         when(authenticationManager.authenticate(any()))
-                .thenReturn(new TestingAuthenticationToken(user.getEmail(), null, "ROLE_MANAGER"));
+            .thenReturn(new TestingAuthenticationToken(user.getEmail(), null, "ROLE_MANAGER"));
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(user.getEmail()))
-                .thenReturn(Optional.of(user));
+            .thenReturn(Optional.of(user));
         doAnswer(invocation -> {
             if (invocation.getArgument(0) == employee) {
                 employee.setCpf("98765432100");
@@ -235,8 +244,7 @@ class AuthenticationServiceTest {
         ResetPasswordRequest request = new ResetPasswordRequest("token", "Mottainai@2026");
 
         assertThrows(BusinessException.class, () -> authenticationService.resetPassword(request));
-
-        verify(rlsContextService, never()).bootstrapByToken(any(), anyBoolean());
+        verify(rlsContextService, never()).bootstrapByToken(any(), anyString());
     }
 
     @Test
@@ -249,13 +257,11 @@ class AuthenticationServiceTest {
         user.setEmployee(employee);
         when(rlsContextService.bootstrapByCpf(request.cpf())).thenReturn(true);
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(request.email()))
-                .thenReturn(Optional.of(user));
+            .thenReturn(Optional.of(user));
         when(appUserRepository.findByIdWithWriteLock(user.getId())).thenReturn(Optional.of(user));
         when(appUserRepository.matchesCurrentIdentity(user.getId(), request.email(), request.cpf(), true))
-                .thenReturn(false);
-
+            .thenReturn(false);
         authenticationService.requestPasswordReset(request);
-
         verify(passwordResetTokenRepository, never()).save(any());
         verify(passwordResetEmailService, never()).sendRecoveryLink(any(), any());
     }
@@ -264,16 +270,12 @@ class AuthenticationServiceTest {
     @DisplayName("Should invalidate old recovery tokens when changing password")
     void shouldInvalidateOldRecoveryTokensWhenChangingPassword() {
         AppUser user = user("manager@mottainai.com");
-        when(appUserRepository.findActiveByEmailWithWriteLock(user.getEmail()))
-                .thenReturn(Optional.of(user));
+        when(appUserRepository.findActiveByEmailWithWriteLock(user.getEmail())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Old-Password@42", "old-hash")).thenReturn(true);
         when(passwordEncoder.encode("New-Password@42")).thenReturn("new-hash");
-
-        authenticationService.changePassword(
-                new ChangePasswordRequest("Old-Password@42", "New-Password@42"), user.getEmail());
-
+        authenticationService.changePassword(new ChangePasswordRequest("Old-Password@42", "New-Password@42"),
+                user.getEmail());
         assertEquals("new-hash", user.getPasswordHash());
-        assertEquals(3, user.getTokenVersion());
         verify(passwordResetTokenRepository).invalidateUnusedForUser(eq(user.getId()), any());
         verify(staffSessionRepository).revokeAllForUser(user.getId());
         var order = inOrder(appUserRepository, passwordEncoder);
@@ -285,12 +287,9 @@ class AuthenticationServiceTest {
     @DisplayName("Should reject a stale current password after locking the account")
     void shouldRejectStaleCurrentPasswordAfterLock() {
         AppUser user = user("manager@mottainai.com");
-        when(appUserRepository.findActiveByEmailWithWriteLock(user.getEmail()))
-                .thenReturn(Optional.of(user));
-
-        assertThrows(BusinessException.class, () -> authenticationService.changePassword(
-                new ChangePasswordRequest("Stale@Password42", "New-Password@42"), user.getEmail()));
-
+        when(appUserRepository.findActiveByEmailWithWriteLock(user.getEmail())).thenReturn(Optional.of(user));
+        assertThrows(BusinessException.class, () -> authenticationService
+            .changePassword(new ChangePasswordRequest("Stale@Password42", "New-Password@42"), user.getEmail()));
         verify(passwordEncoder).matches("Stale@Password42", "old-hash");
         verify(passwordEncoder, never()).encode(any());
         verify(staffSessionRepository, never()).revokeAllForUser(any());
@@ -305,31 +304,31 @@ class AuthenticationServiceTest {
         Employee employee = new Employee();
         employee.setRole(role);
         user.setEmployee(employee);
+
         UUID sessionId = UUID.randomUUID();
         Jwt jwt = mock(Jwt.class);
+
         when(jwtDecoder.decode("old-refresh")).thenReturn(jwt);
         when(jwt.getClaimAsString("use")).thenReturn("refresh");
         when(jwt.getSubject()).thenReturn(user.getEmail());
         when(jwt.getClaimAsString("sid")).thenReturn(sessionId.toString());
-        when(jwt.getClaim("tokenVersion")).thenReturn(2);
         when(rlsContextService.bootstrapByEmail(user.getEmail())).thenReturn(true);
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(user.getEmail()))
-                .thenReturn(Optional.of(user));
+            .thenReturn(Optional.of(user));
         when(jwtProperties.refreshExpirationDays()).thenReturn(7L);
         when(jwtProperties.expirationMinutes()).thenReturn(60L);
-        when(jwtService.generateRefreshToken(any(), eq(2), eq(sessionId), eq(7L)))
-                .thenReturn("next-refresh");
-        when(jwtService.generateAccessToken(any(), eq(2), eq(sessionId)))
-                .thenReturn("next-access");
+        when(jwtService.generateRefreshToken(any(), eq(sessionId), eq(7L))).thenReturn("next-refresh");
+        when(jwtService.generateAccessToken(any(), eq(sessionId))).thenReturn("next-access");
         when(tokenHashService.hash("old-refresh")).thenReturn("old-hash");
         when(tokenHashService.hash("next-refresh")).thenReturn("next-hash");
         when(staffSessionRepository.rotate(eq(sessionId), eq(1), eq("old-hash"), eq("next-hash"), any()))
-                .thenReturn(true);
+            .thenReturn(true);
 
         TokenResponse response = authenticationService.refresh("old-refresh");
 
         assertEquals("next-access", response.accessToken());
         assertEquals("next-refresh", response.refreshToken());
+
         verify(staffSessionRepository).rotate(eq(sessionId), eq(1), eq("old-hash"), eq("next-hash"), any());
     }
 
@@ -348,19 +347,15 @@ class AuthenticationServiceTest {
         when(jwt.getClaimAsString("use")).thenReturn("refresh");
         when(jwt.getSubject()).thenReturn(user.getEmail());
         when(jwt.getClaimAsString("sid")).thenReturn(sessionId.toString());
-        when(jwt.getClaim("tokenVersion")).thenReturn(2);
         when(rlsContextService.bootstrapByEmail(user.getEmail())).thenReturn(true);
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(user.getEmail()))
-                .thenReturn(Optional.of(user));
+            .thenReturn(Optional.of(user));
         when(jwtProperties.refreshExpirationDays()).thenReturn(7L);
-        when(jwtService.generateRefreshToken(any(), eq(2), eq(sessionId), eq(7L)))
-                .thenReturn("next-refresh");
+        when(jwtService.generateRefreshToken(any(), eq(sessionId), eq(7L))).thenReturn("next-refresh");
         when(tokenHashService.hash("old-refresh")).thenReturn("old-hash");
         when(tokenHashService.hash("next-refresh")).thenReturn("next-hash");
-
         assertThrows(BusinessException.class, () -> authenticationService.refresh("old-refresh"));
-
-        verify(jwtService, never()).generateAccessToken(any(), any(), any());
+        verify(jwtService, never()).generateAccessToken(any(), any());
     }
 
     @Test
@@ -369,12 +364,10 @@ class AuthenticationServiceTest {
         AppUser user = user("manager@mottainai.com");
         UUID sessionId = UUID.randomUUID();
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(user.getEmail()))
-                .thenReturn(Optional.of(user));
+            .thenReturn(Optional.of(user));
         when(tokenHashService.hash("refresh-token")).thenReturn("refresh-hash");
         when(staffSessionRepository.revoke(sessionId, "refresh-hash", user.getId())).thenReturn(true);
-
         authenticationService.logout("refresh-token", user.getEmail(), sessionId);
-
         verify(staffSessionRepository).revoke(sessionId, "refresh-hash", user.getId());
     }
 
@@ -387,18 +380,15 @@ class AuthenticationServiceTest {
         employee.setActive(false);
         user.setEmployee(employee);
         user.setActive(false);
-        UUID invitationId = UUID.randomUUID();
+        Long invitationId = 17L;
         when(tokenHashService.hash("invite-token")).thenReturn("invite-hash");
-        when(rlsContextService.bootstrapByToken(eq("invite-hash"), anyBoolean()))
-                .thenAnswer(invocation -> Boolean.TRUE.equals(invocation.getArgument(1)) ? user.getId() : null);
+        when(rlsContextService.bootstrapByToken(eq("invite-hash"), anyString()))
+            .thenAnswer(invocation -> PasswordTokenType.EMPLOYEE_INVITATION.name().equals(invocation.getArgument(1)) ? user.getId() : null);
         when(appUserRepository.findByIdWithWriteLock(user.getId())).thenReturn(Optional.of(user));
         when(invitationTokenRepository.findUnusedByHashForUpdate("invite-hash"))
-                .thenReturn(Optional.of(new EmployeeInvitationTokenRepository.Invitation(
-                        invitationId, user.getId(), OffsetDateTime.now().plusHours(1))));
+            .thenReturn(Optional.of(new EmployeeInvitationTokenRepository.Invitation(invitationId, user.getId(), OffsetDateTime.now().plusHours(1))));
         when(passwordEncoder.encode("Strong@Password42")).thenReturn("encoded-password");
-
         authenticationService.resetPassword(new ResetPasswordRequest("invite-token", "Strong@Password42"));
-
         assertTrue(user.getActive());
         assertTrue(user.getEmployee().getActive());
         assertTrue(user.getPasswordSet());
@@ -418,21 +408,20 @@ class AuthenticationServiceTest {
         token.setUser(user);
         token.setExpiresAt(OffsetDateTime.now().plusMinutes(10));
         when(tokenHashService.hash("recovery-token")).thenReturn("recovery-hash");
-        when(rlsContextService.bootstrapByToken("recovery-hash", false)).thenReturn(user.getId());
+        when(rlsContextService.bootstrapByToken("recovery-hash", PasswordTokenType.PASSWORD_RESET.name()))
+            .thenReturn(user.getId());
         when(appUserRepository.findByIdWithWriteLock(user.getId())).thenReturn(Optional.of(user));
-        when(passwordResetTokenRepository.findUnusedByHashForUpdate("recovery-hash"))
-                .thenReturn(Optional.of(token));
+        when(passwordResetTokenRepository.findUnusedByHashForUpdate("recovery-hash", PasswordTokenType.PASSWORD_RESET))
+            .thenReturn(Optional.of(token));
         when(passwordEncoder.encode("Strong@Password42")).thenReturn("encoded-password");
-
         authenticationService.resetPassword(new ResetPasswordRequest("recovery-token", "Strong@Password42"));
-
         assertEquals("encoded-password", user.getPasswordHash());
-        assertEquals(3, user.getTokenVersion());
         verify(passwordResetTokenRepository).save(token);
         verify(staffSessionRepository).revokeAllForUser(user.getId());
         var order = inOrder(appUserRepository, passwordResetTokenRepository);
         order.verify(appUserRepository).findByIdWithWriteLock(user.getId());
-        order.verify(passwordResetTokenRepository).findUnusedByHashForUpdate("recovery-hash");
+        order.verify(passwordResetTokenRepository)
+            .findUnusedByHashForUpdate("recovery-hash", PasswordTokenType.PASSWORD_RESET);
     }
 
     @Test
@@ -445,18 +434,17 @@ class AuthenticationServiceTest {
         user.setEmployee(employee);
         when(rlsContextService.bootstrapByCpf(request.cpf())).thenReturn(true);
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(request.email()))
-                .thenReturn(Optional.of(user));
+            .thenReturn(Optional.of(user));
         when(appUserRepository.findByIdWithWriteLock(user.getId())).thenReturn(Optional.of(user));
         when(appUserRepository.matchesCurrentIdentity(user.getId(), request.email(), request.cpf(), true))
-                .thenReturn(true);
-        when(passwordResetTokenRepository.findFirstByUser_IdAndInvitationIdIsNullAndUsedAtIsNullOrderByCreatedAtDesc(user.getId()))
-                .thenReturn(Optional.empty());
+            .thenReturn(true);
+        when(passwordResetTokenRepository.findFirstByUser_IdAndTokenTypeAndUsedAtIsNullOrderByCreatedAtDesc(
+                user.getId(), PasswordTokenType.PASSWORD_RESET))
+            .thenReturn(Optional.empty());
         when(tokenHashService.newToken()).thenReturn("recovery-token");
         when(tokenHashService.hash("recovery-token")).thenReturn("recovery-hash");
         TransactionSynchronizationManager.initSynchronization();
-
         authenticationService.requestPasswordReset(request);
-
         verify(passwordResetTokenRepository).save(any(PasswordResetToken.class));
         verify(passwordResetEmailService, never()).sendRecoveryLink(any(), any());
         TransactionSynchronizationUtils.triggerAfterCommit();
@@ -468,7 +456,7 @@ class AuthenticationServiceTest {
         user.setId(1);
         user.setEmail(email);
         user.setPasswordHash("old-hash");
-        user.setTokenVersion(2);
         return user;
     }
+
 }

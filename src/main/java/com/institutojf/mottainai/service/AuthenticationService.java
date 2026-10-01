@@ -10,6 +10,7 @@ import com.institutojf.mottainai.exception.BusinessException;
 import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.model.Employee;
 import com.institutojf.mottainai.model.PasswordResetToken;
+import com.institutojf.mottainai.model.enums.PasswordTokenType;
 import com.institutojf.mottainai.repository.AppUserRepository;
 import com.institutojf.mottainai.repository.AuditLogRepository;
 import com.institutojf.mottainai.repository.EmployeeInvitationTokenRepository;
@@ -51,31 +52,49 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Service
 public class AuthenticationService {
+
     private static final int RATE_LIMIT_MINUTES = 5;
+
     private static final int RESET_TOKEN_EXPIRATION_MINUTES = 15;
 
     private final AuthenticationManager authenticationManager;
+
     private final AppUserRepository appUserRepository;
+
     private final EmployeeRepository employeeRepository;
+
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+
     private final EmployeeInvitationTokenRepository invitationTokenRepository;
+
     private final StaffSessionRepository staffSessionRepository;
+
     private final AuditLogRepository auditLogRepository;
+
     private final PasswordResetEmailService passwordResetEmailService;
+
     private final StaffEmailFailureService emailFailureService;
+
     private final RlsContextService rlsContextService;
+
     private final TokenHashService tokenHashService;
+
     private final JwtService jwtService;
+
     private final JwtDecoder jwtDecoder;
+
     private final JwtProperties jwtProperties;
+
     private final PasswordProperties passwordProperties;
+
     private final PasswordEncoder passwordEncoder;
+
     private final EntityManager entityManager;
 
     @Transactional
     public TokenResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken.unauthenticated(request.cpf(), request.password()));
+        Authentication authentication = authenticationManager
+            .authenticate(UsernamePasswordAuthenticationToken.unauthenticated(request.cpf(), request.password()));
         AppUser user = activeUser(authentication.getName());
         entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
         Employee employee = user.getEmployee();
@@ -83,19 +102,18 @@ public class AuthenticationService {
             throw new BadCredentialsException("Invalid CPF or password");
         }
         entityManager.refresh(employee, LockModeType.PESSIMISTIC_WRITE);
-        if (!request.cpf().equals(employee.getCpf())
-                || !Boolean.TRUE.equals(user.getActive()) || user.getDeletedAt() != null
-                || !Boolean.TRUE.equals(employee.getActive()) || employee.getDeletedAt() != null
-                || employee.getRole() == null || !Boolean.TRUE.equals(employee.getRole().getActive())
-                || employee.getRole().getDeletedAt() != null
+        if (!request.cpf().equals(employee.getCpf()) || !Boolean.TRUE.equals(user.getActive())
+                || user.getDeletedAt() != null || !Boolean.TRUE.equals(employee.getActive())
+                || employee.getDeletedAt() != null || employee.getRole() == null
+                || !Boolean.TRUE.equals(employee.getRole().getActive()) || employee.getRole().getDeletedAt() != null
                 || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new BadCredentialsException("Invalid CPF or password");
         }
         Authentication currentAuthentication = authenticationFor(user);
         appUserRepository.updateLastLogin(user.getId(), LocalDateTime.now(ZoneOffset.UTC));
         UUID sessionId = UUID.randomUUID();
-        String refreshToken = jwtService.generateRefreshToken(currentAuthentication, user.getTokenVersion(),
-                sessionId, jwtProperties.refreshExpirationDays());
+        String refreshToken = jwtService.generateRefreshToken(currentAuthentication, sessionId,
+                jwtProperties.refreshExpirationDays());
         staffSessionRepository.create(sessionId, user.getId(), tokenHashService.hash(refreshToken),
                 OffsetDateTime.now(ZoneOffset.UTC).plusDays(jwtProperties.refreshExpirationDays()));
         return tokenResponse(currentAuthentication, user, sessionId, refreshToken);
@@ -107,7 +125,8 @@ public class AuthenticationService {
         Jwt token;
         try {
             token = jwtDecoder.decode(rawRefreshToken);
-        } catch (JwtException exception) {
+        }
+        catch (JwtException exception) {
             throw new BadCredentialsException("Invalid refresh token", exception);
         }
         if (!"refresh".equals(token.getClaimAsString("use"))
@@ -116,14 +135,9 @@ public class AuthenticationService {
         }
         AppUser user = activeUser(token.getSubject());
         UUID sessionId = sessionId(token);
-        Object version = token.getClaim("tokenVersion");
-        if (!(version instanceof Number tokenVersion)
-                || !user.getTokenVersion().equals(tokenVersion.intValue())) {
-            throw new BusinessException("Invalid refresh token");
-        }
         Authentication authentication = authenticationFor(user);
-        String nextRefreshToken = jwtService.generateRefreshToken(authentication, user.getTokenVersion(),
-                sessionId, jwtProperties.refreshExpirationDays());
+        String nextRefreshToken = jwtService.generateRefreshToken(authentication, sessionId,
+                jwtProperties.refreshExpirationDays());
         if (!staffSessionRepository.rotate(sessionId, user.getId(), tokenHashService.hash(rawRefreshToken),
                 tokenHashService.hash(nextRefreshToken),
                 OffsetDateTime.now(ZoneOffset.UTC).plusDays(jwtProperties.refreshExpirationDays()))) {
@@ -146,48 +160,48 @@ public class AuthenticationService {
         if (!rlsContextService.bootstrapByCpf(request.cpf())) {
             if (rlsContextService.bootstrapInvitedByCpf(request.cpf())) {
                 appUserRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(request.email())
-                        .filter(user -> request.cpf().equals(user.getEmployee().getCpf())
-                                && !Boolean.TRUE.equals(user.getActive())
-                                && invitationTokenRepository.hasPendingForUser(user.getId()))
-                        .ifPresent(user -> renewInvitation(user, request));
+                    .filter(user -> request.cpf().equals(user.getEmployee().getCpf())
+                            && !Boolean.TRUE.equals(user.getActive())
+                            && invitationTokenRepository.hasPendingForUser(user.getId()))
+                    .ifPresent(user -> renewInvitation(user, request));
             }
             return;
         }
         appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(request.email())
-                .filter(user -> request.cpf().equals(user.getEmployee().getCpf()))
-                .ifPresent(user -> createRecoveryToken(user, request));
+            .filter(user -> request.cpf().equals(user.getEmployee().getCpf()))
+            .ifPresent(user -> createRecoveryToken(user, request));
     }
 
     @Transactional(readOnly = true)
     public boolean validateResetToken(String rawToken) {
         String hash = tokenHashService.hash(rawToken);
-        return rlsContextService.bootstrapByToken(hash, false) != null
-                || rlsContextService.bootstrapByToken(hash, true) != null;
+        return rlsContextService.bootstrapByToken(hash, PasswordTokenType.PASSWORD_RESET.name()) != null
+                || rlsContextService.bootstrapByToken(hash, PasswordTokenType.EMPLOYEE_INVITATION.name()) != null;
     }
 
     /**
-     * Atualiza a senha somente quando o token de recuperação ou convite está válido
-     * A versão do token muda para bloquear JWTs emitidos antes da troca
+     * Atualiza a senha somente quando o token de recuperação ou convite está válido As
+     * sessões existentes são revogadas para bloquear tokens emitidos antes da troca
      */
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         validateNewPassword(request.newPassword());
         // Busca apenas o hash do token para não persistir o valor recebido por email
         String hash = tokenHashService.hash(request.token());
-        Integer userId = rlsContextService.bootstrapByToken(hash, false);
+        Integer userId = rlsContextService.bootstrapByToken(hash, PasswordTokenType.PASSWORD_RESET.name());
         boolean invitation = false;
         if (userId == null) {
-            userId = rlsContextService.bootstrapByToken(hash, true);
+            userId = rlsContextService.bootstrapByToken(hash, PasswordTokenType.EMPLOYEE_INVITATION.name());
             invitation = true;
         }
         if (userId == null) {
             throw new BusinessException("Invalid or expired reset token");
         }
         AppUser user = appUserRepository.findByIdWithWriteLock(userId)
-                .orElseThrow(() -> new BusinessException("Invalid or expired reset token"));
+            .orElseThrow(() -> new BusinessException("Invalid or expired reset token"));
         if (invitation) {
             var token = invitationTokenRepository.findUnusedByHashForUpdate(hash)
-                    .orElseThrow(() -> new BusinessException("Invalid or expired reset token"));
+                .orElseThrow(() -> new BusinessException("Invalid or expired reset token"));
             if (!token.userId().equals(userId) || !token.expiresAt().isAfter(OffsetDateTime.now(ZoneOffset.UTC))) {
                 throw new BusinessException("Invalid or expired reset token");
             }
@@ -198,9 +212,11 @@ public class AuthenticationService {
             invitationTokenRepository.markUsed(token.id());
             auditLogRepository.record("employee", "UPDATE", user.getEmployee().getId().toString(), userId,
                     Map.of("active", false), Map.of("active", true));
-        } else {
-            PasswordResetToken token = passwordResetTokenRepository.findUnusedByHashForUpdate(hash)
-                    .orElseThrow(() -> new BusinessException("Invalid or expired reset token"));
+        }
+        else {
+            PasswordResetToken token = passwordResetTokenRepository
+                .findUnusedByHashForUpdate(hash, PasswordTokenType.PASSWORD_RESET)
+                .orElseThrow(() -> new BusinessException("Invalid or expired reset token"));
             if (!token.getUser().getId().equals(userId)
                     || !token.getExpiresAt().isAfter(OffsetDateTime.now(ZoneOffset.UTC))) {
                 throw new BusinessException("Invalid or expired reset token");
@@ -209,7 +225,6 @@ public class AuthenticationService {
             passwordResetTokenRepository.save(token);
         }
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        user.setTokenVersion(user.getTokenVersion() + 1);
         appUserRepository.save(user);
         passwordResetTokenRepository.invalidateUnusedForUser(userId, OffsetDateTime.now(ZoneOffset.UTC));
         staffSessionRepository.revokeAllForUser(userId);
@@ -220,13 +235,12 @@ public class AuthenticationService {
     @Transactional
     public void changePassword(ChangePasswordRequest request, String email) {
         AppUser user = appUserRepository.findActiveByEmailWithWriteLock(email)
-                .orElseThrow(() -> new BusinessException("User is unavailable"));
+            .orElseThrow(() -> new BusinessException("User is unavailable"));
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
             throw new BusinessException("Current password is incorrect");
         }
         validateNewPassword(request.newPassword());
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        user.setTokenVersion(user.getTokenVersion() + 1);
         appUserRepository.save(user);
         passwordResetTokenRepository.invalidateUnusedForUser(user.getId(), OffsetDateTime.now(ZoneOffset.UTC));
         staffSessionRepository.revokeAllForUser(user.getId());
@@ -236,15 +250,16 @@ public class AuthenticationService {
 
     private void createRecoveryToken(AppUser user, ForgotPasswordRequest request) {
         appUserRepository.findByIdWithWriteLock(user.getId())
-                .orElseThrow(() -> new BusinessException("User is unavailable"));
+            .orElseThrow(() -> new BusinessException("User is unavailable"));
         if (!appUserRepository.matchesCurrentIdentity(user.getId(), request.email(), request.cpf(), true)) {
             return;
         }
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         boolean recent = passwordResetTokenRepository
-                .findFirstByUser_IdAndInvitationIdIsNullAndUsedAtIsNullOrderByCreatedAtDesc(user.getId())
-                .map(token -> token.getCreatedAt().plusMinutes(RATE_LIMIT_MINUTES).isAfter(now))
-                .orElse(false);
+            .findFirstByUser_IdAndTokenTypeAndUsedAtIsNullOrderByCreatedAtDesc(user.getId(),
+                    PasswordTokenType.PASSWORD_RESET)
+            .map(token -> token.getCreatedAt().plusMinutes(RATE_LIMIT_MINUTES).isAfter(now))
+            .orElse(false);
         if (recent) {
             return;
         }
@@ -252,6 +267,7 @@ public class AuthenticationService {
         PasswordResetToken token = new PasswordResetToken();
         token.setUser(user);
         token.setTokenHash(tokenHashService.hash(rawToken));
+        token.setTokenType(PasswordTokenType.PASSWORD_RESET);
         token.setCreatedAt(now);
         token.setExpiresAt(now.plusMinutes(RESET_TOKEN_EXPIRATION_MINUTES));
         passwordResetTokenRepository.save(token);
@@ -259,13 +275,15 @@ public class AuthenticationService {
         afterCommit(() -> {
             try {
                 passwordResetEmailService.sendRecoveryLink(request.email(), rawToken);
-            } catch (MailException exception) {
+            }
+            catch (MailException exception) {
                 log.error("Recovery email delivery failed for user {}", user.getId(), exception);
                 try {
                     emailFailureService.invalidateRecoveryToken(tokenHash);
-                } catch (RuntimeException cleanupException) {
-                    log.error("Could not invalidate undelivered recovery token for user {}",
-                            user.getId(), cleanupException);
+                }
+                catch (RuntimeException cleanupException) {
+                    log.error("Could not invalidate undelivered recovery token for user {}", user.getId(),
+                            cleanupException);
                 }
             }
         });
@@ -274,7 +292,7 @@ public class AuthenticationService {
     // Renova o convite ainda pendente após confirmar CPF e email sob bloqueio
     private void renewInvitation(AppUser user, ForgotPasswordRequest request) {
         appUserRepository.findByIdWithWriteLock(user.getId())
-                .orElseThrow(() -> new BusinessException("User is unavailable"));
+            .orElseThrow(() -> new BusinessException("User is unavailable"));
         if (!appUserRepository.matchesCurrentIdentity(user.getId(), request.email(), request.cpf(), false)
                 || !invitationTokenRepository.hasPendingForUser(user.getId())) {
             return;
@@ -285,29 +303,34 @@ public class AuthenticationService {
         }
         invitationTokenRepository.invalidateUnusedForUser(user.getId());
         String rawToken = tokenHashService.newToken();
-        invitationTokenRepository.create(UUID.randomUUID(), user.getId(), tokenHashService.hash(rawToken),
+        invitationTokenRepository.create(user.getId(), tokenHashService.hash(rawToken),
                 OffsetDateTime.now(ZoneOffset.UTC).plusHours(48));
         afterCommit(() -> {
             try {
                 passwordResetEmailService.sendInvitationLink(request.email(), rawToken);
-            } catch (MailException exception) {
+            }
+            catch (MailException exception) {
                 log.error("Invitation email delivery failed for user {}", user.getId(), exception);
+                try {
+                    emailFailureService.invalidateInvitationToken(tokenHashService.hash(rawToken));
+                }
+                catch (RuntimeException cleanupException) {
+                    log.error("Could not invalidate undelivered invitation for user {}", user.getId(),
+                            cleanupException);
+                }
             }
         });
     }
 
-    private TokenResponse tokenResponse(Authentication authentication, AppUser user,
-                                        UUID sessionId, String refreshToken) {
-        return new TokenResponse(
-                jwtService.generateAccessToken(authentication, user.getTokenVersion(), sessionId),
-                refreshToken, "Bearer", jwtProperties.expirationMinutes() * 60,
-                jwtProperties.refreshExpirationDays() * 24 * 60 * 60);
+    private TokenResponse tokenResponse(Authentication authentication, AppUser user, UUID sessionId, String refreshToken) {
+        return new TokenResponse(jwtService.generateAccessToken(authentication, sessionId), refreshToken, "Bearer",
+                jwtProperties.expirationMinutes() * 60, jwtProperties.refreshExpirationDays() * 24 * 60 * 60);
     }
 
     // Busca somente a conta ativa associada ao email autenticado
     private AppUser activeUser(String email) {
         return appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(email)
-                .orElseThrow(() -> new BusinessException("User is unavailable"));
+            .orElseThrow(() -> new BusinessException("User is unavailable"));
     }
 
     // Reconstrói as permissões atuais do funcionário para emitir novos tokens
@@ -321,7 +344,8 @@ public class AuthenticationService {
     private UUID sessionId(Jwt token) {
         try {
             return UUID.fromString(token.getClaimAsString("sid"));
-        } catch (RuntimeException exception) {
+        }
+        catch (RuntimeException exception) {
             throw new BusinessException("Invalid refresh token");
         }
     }
@@ -333,13 +357,15 @@ public class AuthenticationService {
         boolean upper = password.chars().anyMatch(Character::isUpperCase);
         boolean lower = password.chars().anyMatch(Character::isLowerCase);
         boolean number = password.chars().anyMatch(Character::isDigit);
-        boolean special = password.chars().anyMatch(character -> !Character.isLetterOrDigit(character)
-                && !Character.isWhitespace(character));
+        boolean special = password.chars()
+            .anyMatch(character -> !Character.isLetterOrDigit(character) && !Character.isWhitespace(character));
         boolean predictable = Arrays.stream(passwordProperties.predictableTerms().split(","))
-                .map(String::trim).filter(term -> !term.isEmpty())
-                .anyMatch(password.toLowerCase(Locale.ROOT)::contains);
+            .map(String::trim)
+            .filter(term -> !term.isEmpty())
+            .anyMatch(password.toLowerCase(Locale.ROOT)::contains);
         if (!upper || !lower || !number || !special || predictable) {
-            throw new BusinessException("Password must contain uppercase, lowercase, number and special character and must not contain predictable terms");
+            throw new BusinessException(
+                    "Password must contain uppercase, lowercase, number and special character and must not contain predictable terms");
         }
     }
 
@@ -352,4 +378,5 @@ public class AuthenticationService {
             }
         });
     }
+
 }
