@@ -6,6 +6,7 @@ import com.institutojf.mottainai.model.Employee;
 import com.institutojf.mottainai.model.EmployeeRole;
 import com.institutojf.mottainai.model.RetailStore;
 import com.institutojf.mottainai.repository.AppUserRepository;
+import com.institutojf.mottainai.repository.RetailStoreRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,43 +27,42 @@ class InventoryAccessTest {
     private AppUserRepository appUserRepository;
 
     @Mock
+    private RetailStoreRepository retailStoreRepository;
+
+    @Mock
     private Authentication authentication;
 
     @Test
     @DisplayName("Should derive manager store instead of using requested store")
     void shouldDeriveManagerStoreInsteadOfUsingRequestedStore() {
-        InventoryAccess access = new InventoryAccess(appUserRepository);
+        InventoryAccess access = new InventoryAccess(appUserRepository, retailStoreRepository);
         when(authentication.isAuthenticated()).thenReturn(true);
         when(authentication.getName()).thenReturn("manager@example.com");
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull("manager@example.com"))
-                .thenReturn(Optional.of(userInStoreWithRole(2, "MANAGER")));
-
+            .thenReturn(Optional.of(userInStoreWithRole(2, "MANAGER")));
         Integer storeId = access.resolveStoreId(authentication, 99);
-
         assertEquals(2, storeId);
     }
 
     @Test
     @DisplayName("Should reject manager access to another store")
     void shouldRejectManagerAccessToAnotherStore() {
-        InventoryAccess access = new InventoryAccess(appUserRepository);
+        InventoryAccess access = new InventoryAccess(appUserRepository, retailStoreRepository);
         when(authentication.isAuthenticated()).thenReturn(true);
         when(authentication.getName()).thenReturn("manager@example.com");
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull("manager@example.com"))
-                .thenReturn(Optional.of(userInStoreWithRole(2, "MANAGER")));
-
+            .thenReturn(Optional.of(userInStoreWithRole(2, "MANAGER")));
         assertThrows(BusinessException.class, () -> access.checkStoreAccess(authentication, 99));
     }
 
     @Test
     @DisplayName("Should require store parameter for administrator list")
     void shouldRequireStoreParameterForAdministratorList() {
-        InventoryAccess access = new InventoryAccess(appUserRepository);
+        InventoryAccess access = new InventoryAccess(appUserRepository, retailStoreRepository);
         when(authentication.isAuthenticated()).thenReturn(true);
         when(authentication.getName()).thenReturn("admin@example.com");
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull("admin@example.com"))
-                .thenReturn(Optional.of(userInStoreWithRole(2, "ADMINISTRATOR")));
-
+            .thenReturn(Optional.of(userInStoreWithRole(2, "ADMINISTRATOR")));
         assertThrows(BusinessException.class, () -> access.resolveStoreId(authentication, null));
     }
 
@@ -78,4 +78,5 @@ class InventoryAccessTest {
         user.setEmployee(employee);
         return user;
     }
+
 }
