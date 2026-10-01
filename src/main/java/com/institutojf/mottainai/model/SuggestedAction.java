@@ -14,7 +14,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -24,6 +26,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "suggested_action")
 public class SuggestedAction {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "suggested_action_id")
@@ -48,6 +51,9 @@ public class SuggestedAction {
     @Column(nullable = false)
     private SuggestedActionStatus status = SuggestedActionStatus.PENDING;
 
+    @Column(name = "source_recommendation_uuid", unique = true)
+    private UUID sourceRecommendationUuid;
+
     @Column(name = "generated_at", nullable = false)
     private LocalDateTime generatedAt;
 
@@ -56,4 +62,5 @@ public class SuggestedAction {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
 }
