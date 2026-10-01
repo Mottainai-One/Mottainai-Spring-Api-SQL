@@ -16,7 +16,6 @@ class GlobalExceptionHandlerTest {
     @DisplayName("Should return forbidden when the employee lacks permission")
     void shouldReturnForbiddenForAccessDenied() {
         var response = exceptionHandler.handleAccessDeniedException(new AccessDeniedException("denied"));
-
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertEquals("Access denied", response.getBody().message());
     }
@@ -24,9 +23,10 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("Should return unauthorized for invalid credentials")
     void shouldReturnUnauthorizedForInvalidCredentials() {
-        var response = exceptionHandler.handleAuthenticationException(new BadCredentialsException("Invalid credentials"));
-
+        var response = exceptionHandler
+            .handleAuthenticationException(new BadCredentialsException("Invalid credentials"));
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertEquals("Invalid CPF or password", response.getBody().message());
     }
+
 }
