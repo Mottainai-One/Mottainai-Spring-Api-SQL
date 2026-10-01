@@ -17,16 +17,13 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 public class InventoryMovementController implements InventoryMovementControllerApi {
+
     private final InventoryMovementService inventoryMovementService;
 
     @Override
     @GetMapping("/api/v1/inventory-movements")
-    public ResponseEntity<List<InventoryMovementResponse>> findByStore(
-            @RequestParam(required = false) Integer storeId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
-            Authentication authentication
-    ) {
+    public ResponseEntity<List<InventoryMovementResponse>> findByStore(@RequestParam(required = false) Integer storeId, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to, Authentication authentication) {
         return ResponseEntity.ok(inventoryMovementService.findByStore(storeId, from, to, authentication));
     }
+
 }
