@@ -1,6 +1,6 @@
 package com.institutojf.mottainai.dto.response;
 
-public record CepResponse (
+public record CepResponse(
         String zipCode,
         String street,
         String neighborhood,

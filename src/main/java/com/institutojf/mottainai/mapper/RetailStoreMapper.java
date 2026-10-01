@@ -10,20 +10,13 @@ import org.springframework.stereotype.Component;
 public class RetailStoreMapper {
 
     private final CompanyMapper companyMapper;
+
     private final AddressMapper addressMapper;
 
     public RetailStoreResponse toResponse(RetailStore store) {
-        return new RetailStoreResponse(
-                store.getId(),
-                companyMapper.toResponse(store.getCompany()),
-                addressMapper.toResponse(store.getAddress()),
-                store.getName(),
-                store.getCnpj(),
-                store.getEmail(),
-                store.getPhone(),
-                store.getLatitude(),
-                store.getLongitude(),
-                store.getActive()
-        );
+        return new RetailStoreResponse(store.getId(), companyMapper.toResponse(store.getCompany()),
+                addressMapper.toResponse(store.getAddress()), store.getName(), store.getCnpj(), store.getEmail(),
+                store.getPhone(), store.getLatitude(), store.getLongitude(), store.getActive());
     }
+
 }

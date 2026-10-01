@@ -10,7 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Component("retailStoreAccess")
 @RequiredArgsConstructor
 public class RetailStoreAccess {
+
     private final AppUserRepository appUserRepository;
+
     private final RlsContextService rlsContextService;
 
     @Transactional(readOnly = true)
@@ -20,7 +22,8 @@ public class RetailStoreAccess {
             return false;
         }
         return appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(authentication.getName())
-                .map(user -> storeId.equals(user.getEmployee().getStore().getId()))
-                .orElse(false);
+            .map(user -> storeId.equals(user.getEmployee().getStore().getId()))
+            .orElse(false);
     }
+
 }
