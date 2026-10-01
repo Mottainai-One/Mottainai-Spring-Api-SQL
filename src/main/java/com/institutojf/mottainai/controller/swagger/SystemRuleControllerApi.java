@@ -31,10 +31,6 @@ public interface SystemRuleControllerApi {
             @ApiResponse(responseCode = "404", description = "System rule not found", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "409", description = "Rule key is ambiguous across categories", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<SystemRuleResponse> update(
-            String key,
-            @Parameter(description = "Required only when the key exists in multiple categories") String category,
-            UpdateSystemRuleRequest request,
-            Authentication authentication
-    );
+    ResponseEntity<SystemRuleResponse> update(String key, @Parameter(description = "Required only when the key exists in multiple categories") String category, UpdateSystemRuleRequest request, Authentication authentication);
+
 }

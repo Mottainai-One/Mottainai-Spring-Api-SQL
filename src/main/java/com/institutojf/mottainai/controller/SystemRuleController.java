@@ -23,6 +23,7 @@ import java.util.List;
 @RequestMapping("/api/v1/system-rules")
 @RequiredArgsConstructor
 public class SystemRuleController implements SystemRuleControllerApi {
+
     private final SystemRuleService systemRuleService;
 
     @Override
@@ -35,10 +36,8 @@ public class SystemRuleController implements SystemRuleControllerApi {
     @Override
     @PutMapping("/{key}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<SystemRuleResponse> update(@PathVariable String key,
-                                                      @RequestParam(required = false) String category,
-                                                      @Valid @RequestBody UpdateSystemRuleRequest request,
-                                                      Authentication authentication) {
+    public ResponseEntity<SystemRuleResponse> update(@PathVariable String key, @RequestParam(required = false) String category, @Valid @RequestBody UpdateSystemRuleRequest request, Authentication authentication) {
         return ResponseEntity.ok(systemRuleService.update(key, category, request, authentication.getName()));
     }
+
 }
