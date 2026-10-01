@@ -10,14 +10,25 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class CustomerAccess {
+
     private final CustomerRepository customerRepository;
 
     public Customer currentCustomer(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated() || authentication.getName() == null) {
             throw new ResourceNotFoundException("Customer not found");
         }
-
         return customerRepository.findByExternalAuthUidAndActiveTrueAndDeletedAtIsNull(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+            .or(() -> customerRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(authentication.getName()))
+            .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
     }
+
+    public boolean canAccess(Authentication authentication, Integer customerId) {
+        try {
+            return currentCustomer(authentication).getId().equals(customerId);
+        }
+        catch (ResourceNotFoundException exception) {
+            return false;
+        }
+    }
+
 }
