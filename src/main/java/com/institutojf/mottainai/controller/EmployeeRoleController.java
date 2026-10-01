@@ -44,7 +44,7 @@ public class EmployeeRoleController implements EmployeeRoleControllerApi {
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<EmployeeRoleResponse> create(@Valid @RequestBody EmployeeRoleRequest request, Authentication authentication) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(employeeRoleService.create(request, authentication.getName()));
+            .body(employeeRoleService.create(request, authentication.getName()));
     }
 
     @Override

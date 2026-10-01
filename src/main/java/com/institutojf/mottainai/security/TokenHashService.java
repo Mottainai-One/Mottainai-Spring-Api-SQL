@@ -11,6 +11,7 @@ import java.util.HexFormat;
 
 @Component
 public class TokenHashService {
+
     private final SecureRandom secureRandom = new SecureRandom();
 
     public String newToken() {
@@ -21,11 +22,12 @@ public class TokenHashService {
 
     public String hash(String token) {
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(token.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException exception) {
+        }
+        catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
         }
     }
+
 }

@@ -3,7 +3,11 @@ package com.institutojf.mottainai.security;
 import com.institutojf.mottainai.controller.ProductController;
 import com.institutojf.mottainai.dto.response.ProductResponse;
 import com.institutojf.mottainai.repository.AppUserRepository;
+import com.institutojf.mottainai.repository.CustomerAuthRepository;
 import com.institutojf.mottainai.service.ProductService;
+import com.institutojf.mottainai.service.ProductCommercialService;
+import com.institutojf.mottainai.service.SupplierProductService;
+import com.institutojf.mottainai.service.SupplierService;
 import com.institutojf.mottainai.service.RlsContextService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,13 +34,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductController.class)
-@Import({SecurityConfig.class, DatabaseUserDetailsService.class})
-@TestPropertySource(properties = {
-        "security.jwt.secret=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
-        "security.jwt.issuer=https://mottainai.local",
-        "security.jwt.expiration-minutes=60",
-        "security.cors.allowed-origins=https://app.example"
-})
+@Import({ SecurityConfig.class, DatabaseUserDetailsService.class })
+@TestPropertySource(properties = { "security.jwt.secret=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
+        "security.jwt.issuer=https://mottainai.local", "security.jwt.expiration-minutes=60",
+        "security.cors.allowed-origins=https://app.example" })
 class ApiSecurityTest {
 
     @Autowired
@@ -46,57 +47,63 @@ class ApiSecurityTest {
     private ProductService productService;
 
     @MockitoBean
+    private ProductCommercialService productCommercialService;
+
+    @MockitoBean
+    private SupplierProductService supplierProductService;
+
+    @MockitoBean
+    private SupplierService supplierService;
+
+    @MockitoBean
     private AppUserRepository appUserRepository;
 
     @MockitoBean
     private RlsContextService rlsContextService;
 
+    @MockitoBean
+    private CustomerAuthRepository customerAuthRepository;
+
     @Test
     @DisplayName("Should reject unauthenticated API request")
     void shouldRejectUnauthenticatedApiRequest() throws Exception {
-        mockMvc.perform(get("/api/v1/products"))
-                .andExpect(status().isUnauthorized());
-
+        mockMvc.perform(get("/api/v1/products")).andExpect(status().isUnauthorized());
         verify(productService, never()).findAll(any());
     }
 
     @Test
     @DisplayName("Should forbid write operation for operator")
     void shouldForbidWriteOperationForOperator() throws Exception {
-        mockMvc.perform(post("/api/v1/products")
-                        .with(user("operator@mottainai.com").roles("OPERATOR"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(productRequest()))
-                .andExpect(status().isForbidden());
-
+        mockMvc
+            .perform(post("/api/v1/products").with(user("operator@mottainai.com").roles("OPERATOR"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productRequest()))
+            .andExpect(status().isForbidden());
         verify(productService, never()).create(any());
     }
 
     @Test
     @DisplayName("Should allow write operation for manager")
     void shouldAllowWriteOperationForManager() throws Exception {
-        when(productService.create(any())).thenReturn(new ProductResponse(
-                1, 1, "Food", 1, "RIC-001", "7891234567890", "12345678", null, "Rice", null, null, "KG", BigDecimal.ONE, true, 1
-        ));
-
-        mockMvc.perform(post("/api/v1/products")
-                        .with(user("manager@mottainai.com").roles("MANAGER"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(productRequest()))
-                .andExpect(status().isCreated());
-
+        when(productService.create(any())).thenReturn(new ProductResponse(1, 1, "Food", 1, "RIC-001", "7891234567890",
+                "12345678", null, "Rice", null, null, "KG", BigDecimal.ONE, true, 1));
+        mockMvc
+            .perform(post("/api/v1/products").with(user("manager@mottainai.com").roles("MANAGER"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productRequest()))
+            .andExpect(status().isCreated());
         verify(productService).create(any());
     }
 
     @Test
     @DisplayName("Should allow idempotency header in browser preflight")
     void shouldAllowIdempotencyHeaderInPreflight() throws Exception {
-        mockMvc.perform(options("/api/v1/loyalty/redeem")
-                        .header("Origin", "https://app.example")
-                        .header("Access-Control-Request-Method", "POST")
-                        .header("Access-Control-Request-Headers", "Idempotency-Key,Content-Type"))
-                .andExpect(status().isOk())
-                .andExpect(header().string("Access-Control-Allow-Headers", containsString("Idempotency-Key")));
+        mockMvc
+            .perform(options("/api/v1/loyalty/redeem").header("Origin", "https://app.example")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "Idempotency-Key,Content-Type"))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Access-Control-Allow-Headers", containsString("Idempotency-Key")));
     }
 
     private String productRequest() {
@@ -104,4 +111,5 @@ class ApiSecurityTest {
                 {"categoryId":1,"taxProfileId":1,"barcode":"7891234567890","ncm":"12345678","name":"Rice","unitMeasure":"KG"}
                 """;
     }
+
 }
