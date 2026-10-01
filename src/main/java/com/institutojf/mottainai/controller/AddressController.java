@@ -35,6 +35,7 @@ public class AddressController implements AddressControllerApi {
         return ResponseEntity.created(location).body(address);
     }
 
+    @Override
     @GetMapping
     public ResponseEntity<Page<AddressResponse>> findAll(Pageable pageable) {
         return ResponseEntity.ok(addressService.findAll(pageable));
@@ -46,6 +47,7 @@ public class AddressController implements AddressControllerApi {
         return ResponseEntity.ok(addressService.findById(id));
     }
 
+    @Override
     @PutMapping("/{id}")
     public ResponseEntity<AddressResponse> update(@PathVariable Integer id, @Valid @RequestBody UpdateAddressRequest request) {
         return ResponseEntity.ok(addressService.update(id, request));
