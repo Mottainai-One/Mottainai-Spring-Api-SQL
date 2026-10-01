@@ -13,4 +13,5 @@ public interface SystemRuleRepository extends JpaRepository<SystemRule, Integer>
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<SystemRule> findAllByKey(String key);
+
 }
