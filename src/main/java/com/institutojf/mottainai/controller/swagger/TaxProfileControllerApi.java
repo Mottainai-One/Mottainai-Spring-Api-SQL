@@ -53,4 +53,5 @@ public interface TaxProfileControllerApi {
             @ApiResponse(responseCode = "404", description = "Tax profile not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     ResponseEntity<Void> deactivate(Integer id, Authentication authentication);
+
 }
