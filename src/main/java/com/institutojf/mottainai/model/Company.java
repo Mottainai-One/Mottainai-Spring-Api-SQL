@@ -17,6 +17,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.sql.Types;
 import java.time.LocalDateTime;
 
@@ -54,10 +55,10 @@ public class Company {
     private String phone;
 
     @Column(precision = 9, scale = 6)
-    private java.math.BigDecimal latitude;
+    private BigDecimal latitude;
 
     @Column(precision = 9, scale = 6)
-    private java.math.BigDecimal longitude;
+    private BigDecimal longitude;
 
     @Column(nullable = false)
     private Boolean active = true;

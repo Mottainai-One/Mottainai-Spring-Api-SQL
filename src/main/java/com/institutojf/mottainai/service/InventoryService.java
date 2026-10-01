@@ -19,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -121,7 +122,7 @@ public class InventoryService {
         return inventory;
     }
 
-    private void validateQuantityRange(java.math.BigDecimal minimum, java.math.BigDecimal maximum) {
+    private void validateQuantityRange(BigDecimal minimum, BigDecimal maximum) {
         if (maximum != null && maximum.compareTo(minimum) < 0) {
             throw new BusinessException("Maximum quantity cannot be below minimum quantity");
         }

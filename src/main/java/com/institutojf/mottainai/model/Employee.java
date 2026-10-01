@@ -9,10 +9,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import lombok.Getter;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "employee", schema = "mottainai")
@@ -49,7 +50,7 @@ public class Employee {
     private Boolean active;
 
     @Column(name = "hire_date", nullable = false)
-    private java.time.LocalDate hireDate;
+    private LocalDate hireDate;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;

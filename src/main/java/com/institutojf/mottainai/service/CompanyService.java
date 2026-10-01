@@ -17,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 @Service
 public class CompanyService {
 
@@ -105,7 +107,7 @@ public class CompanyService {
      */
     private void applyCompanyFields(
             Integer planId, String officialName, String tradeName,
-            String email, String phone, java.math.BigDecimal latitude, java.math.BigDecimal longitude, Company company
+            String email, String phone, BigDecimal latitude, BigDecimal longitude, Company company
     ) {
         SubscriptionPlan plan = subscriptionPlanRepository.findByIdAndActiveTrueAndDeletedAtIsNull(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription plan not found"));

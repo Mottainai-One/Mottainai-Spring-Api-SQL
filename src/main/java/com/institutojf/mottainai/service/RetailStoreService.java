@@ -18,6 +18,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 @Service
 public class RetailStoreService {
 
@@ -106,7 +108,7 @@ public class RetailStoreService {
                 .orElseThrow(() -> new ResourceNotFoundException("Store not found"));
     }
 
-    private void applyStoreFields(Integer addressId, String name, String email, String phone, java.math.BigDecimal latitude, java.math.BigDecimal longitude, RetailStore store) {
+    private void applyStoreFields(Integer addressId, String name, String email, String phone, BigDecimal latitude, BigDecimal longitude, RetailStore store) {
         Address address = addressRepository.findByIdAndDeletedAtIsNull(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
 
