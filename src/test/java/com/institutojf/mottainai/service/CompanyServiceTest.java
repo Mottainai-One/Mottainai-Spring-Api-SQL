@@ -7,8 +7,14 @@ import com.institutojf.mottainai.exception.ConflictException;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import com.institutojf.mottainai.mapper.CompanyMapper;
 import com.institutojf.mottainai.model.Company;
+import com.institutojf.mottainai.model.AppUser;
+import com.institutojf.mottainai.model.Employee;
+import com.institutojf.mottainai.model.RetailStore;
 import com.institutojf.mottainai.model.SubscriptionPlan;
+import com.institutojf.mottainai.repository.AppUserRepository;
+import com.institutojf.mottainai.repository.AuditLogRepository;
 import com.institutojf.mottainai.repository.CompanyRepository;
+import com.institutojf.mottainai.repository.EmployeeRepository;
 import com.institutojf.mottainai.repository.RetailStoreRepository;
 import com.institutojf.mottainai.repository.SubscriptionPlanRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +29,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -41,6 +47,15 @@ class CompanyServiceTest {
 
     @Mock
     private RetailStoreRepository retailStoreRepository;
+
+    @Mock
+    private EmployeeRepository employeeRepository;
+
+    @Mock
+    private AppUserRepository appUserRepository;
+
+    @Mock
+    private AuditLogRepository auditLogRepository;
 
     @Mock
     private CompanyMapper companyMapper;
@@ -88,7 +103,8 @@ class CompanyServiceTest {
         SubscriptionPlan smallerPlan = plan();
         smallerPlan.setStoreLimit(1);
         when(companyRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(company));
-        when(subscriptionPlanRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(smallerPlan));
+        when(subscriptionPlanRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1))
+            .thenReturn(Optional.of(smallerPlan));
         when(retailStoreRepository.countByCompany_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(3L);
 
         assertThrows(BusinessException.class, () -> companyService.update(1, updateRequest(true)));
@@ -113,40 +129,41 @@ class CompanyServiceTest {
     }
 
     @Test
-    @DisplayName("Should deactivate company without soft deleting it")
-    void shouldDeactivateCompanyWithoutSoftDeletingIt() {
+    @DisplayName("Should soft delete company and its organizational hierarchy")
+    void shouldSoftDeleteCompanyAndItsOrganizationalHierarchy() {
         Company company = company(1, true);
+        RetailStore store = new RetailStore();
+        store.setActive(true);
+        Employee employee = new Employee();
+        employee.setActive(true);
+        AppUser user = new AppUser();
+        user.setId(9);
+        user.setActive(true);
+        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull("admin@example.com")).thenReturn(Optional.of(user));
         when(companyRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(company));
-        when(retailStoreRepository.existsByCompany_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(false);
+        when(retailStoreRepository.findAllByCompany_IdAndDeletedAtIsNull(1)).thenReturn(java.util.List.of(store));
+        when(employeeRepository.findAllByStore_Company_IdAndDeletedAtIsNull(1)).thenReturn(java.util.List.of(employee));
+        when(appUserRepository.findAllByEmployee_Store_Company_IdAndDeletedAtIsNull(1)).thenReturn(java.util.List.of(user));
 
-        companyService.deactivate(1);
+        companyService.deactivate(1, "admin@example.com");
 
         assertFalse(company.getActive());
-        assertNull(company.getDeletedAt());
+        assertNotNull(company.getDeletedAt());
+        assertFalse(store.getActive());
+        assertNotNull(store.getDeletedAt());
+        assertFalse(employee.getActive());
+        assertNotNull(employee.getDeletedAt());
+        assertFalse(user.getActive());
+        assertNotNull(user.getDeletedAt());
         verify(companyRepository).save(company);
     }
 
-    @Test
-    @DisplayName("Should reject company deactivation when it has active stores")
-    void shouldRejectCompanyDeactivationWhenItHasActiveStores() {
-        when(companyRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(company(1, true)));
-        when(retailStoreRepository.existsByCompany_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(true);
-
-        assertThrows(BusinessException.class, () -> companyService.deactivate(1));
-
-        verify(companyRepository, never()).save(any());
-    }
-
     private CreateCompanyRequest createRequest() {
-        return new CreateCompanyRequest(
-                1, "Mottainai Comercio LTDA", "Mottainai", "11222333000181", "contato@mottainai.com", "11999999999", null, null
-        );
+        return new CreateCompanyRequest(1, "Mottainai Comercio LTDA", "Mottainai", "11222333000181", "contato@mottainai.com", "11999999999", null, null);
     }
 
     private UpdateCompanyRequest updateRequest(boolean active) {
-        return new UpdateCompanyRequest(
-                1, "Mottainai Comercio LTDA", "Mottainai", "contato@mottainai.com", "11999999999", null, null, active
-        );
+        return new UpdateCompanyRequest(1, "Mottainai Comercio LTDA", "Mottainai", "contato@mottainai.com", "11999999999", null, null, active);
     }
 
     private SubscriptionPlan plan() {
@@ -170,4 +187,5 @@ class CompanyServiceTest {
         company.setActive(active);
         return company;
     }
+
 }
