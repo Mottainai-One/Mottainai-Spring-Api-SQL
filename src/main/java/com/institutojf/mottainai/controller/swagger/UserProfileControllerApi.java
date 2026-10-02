@@ -62,5 +62,5 @@ public interface UserProfileControllerApi {
             @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "User or role not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<UserResponse> update(Integer id, UpdateStoreUserRequest request);
+    ResponseEntity<UserResponse> update(Integer id, UpdateStoreUserRequest request, Authentication authentication);
 }

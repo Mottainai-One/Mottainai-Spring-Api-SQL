@@ -19,6 +19,7 @@ public record UpdateProductRequest(
         @Size(max = 100) String brand,
         @NotBlank @Size(max = 20) String unitMeasure,
         @DecimalMin(value = "0.000") @Digits(integer = 7, fraction = 3) BigDecimal weight,
-        @NotNull Boolean active
+        @NotNull Boolean active,
+        @NotNull Integer version
 ) {
 }

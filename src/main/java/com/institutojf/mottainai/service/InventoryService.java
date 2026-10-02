@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class InventoryService {
@@ -82,6 +83,9 @@ public class InventoryService {
     public InventoryResponse update(Integer id, UpdateInventoryRequest request, Authentication authentication) {
         validateQuantityRange(request.minimumQuantity(), request.maximumQuantity());
         Inventory inventory = findAccessibleInventory(id, authentication);
+        if (!Objects.equals(inventory.getVersion(), request.version())) {
+            throw new ConflictException("Inventory was updated by another request; reload it and retry");
+        }
         inventory.setMinimumQuantity(request.minimumQuantity());
         inventory.setMaximumQuantity(request.maximumQuantity());
         inventory.setLocation(request.location());

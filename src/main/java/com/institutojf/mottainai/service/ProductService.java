@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
 @Service
 public class ProductService {
@@ -80,6 +81,9 @@ public class ProductService {
     @Transactional
     public ProductResponse update(Integer id, UpdateProductRequest request) {
         Product product = findProductById(id);
+        if (!Objects.equals(product.getVersion(), request.version())) {
+            throw new ConflictException("Product was updated by another request; reload it and retry");
+        }
         if (Boolean.FALSE.equals(request.active())) {
             ensureCanDeactivate(id);
         }

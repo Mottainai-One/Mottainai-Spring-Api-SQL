@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.response.LoyaltyAccountResponse;
 import com.institutojf.mottainai.dto.response.LoyaltyRewardResponse;
 import com.institutojf.mottainai.dto.response.LoyaltyTransactionResponse;
 import com.institutojf.mottainai.exception.BusinessException;
+import com.institutojf.mottainai.exception.ConflictException;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import com.institutojf.mottainai.model.LoyaltyAccount;
 import com.institutojf.mottainai.model.LoyaltyRedemption;
@@ -15,6 +16,7 @@ import com.institutojf.mottainai.repository.LoyaltyAccountRepository;
 import com.institutojf.mottainai.repository.LoyaltyRedemptionRepository;
 import com.institutojf.mottainai.repository.LoyaltyRewardRepository;
 import com.institutojf.mottainai.repository.LoyaltyTransactionRepository;
+import com.institutojf.mottainai.repository.OutboxEventRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,12 +30,14 @@ public class LoyaltyService {
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
     private final LoyaltyRewardRepository loyaltyRewardRepository;
     private final LoyaltyRedemptionRepository loyaltyRedemptionRepository;
+    private final OutboxEventRepository outboxEventRepository;
 
-    public LoyaltyService(LoyaltyAccountRepository loyaltyAccountRepository, LoyaltyTransactionRepository loyaltyTransactionRepository, LoyaltyRewardRepository loyaltyRewardRepository, LoyaltyRedemptionRepository loyaltyRedemptionRepository) {
+    public LoyaltyService(LoyaltyAccountRepository loyaltyAccountRepository, LoyaltyTransactionRepository loyaltyTransactionRepository, LoyaltyRewardRepository loyaltyRewardRepository, LoyaltyRedemptionRepository loyaltyRedemptionRepository, OutboxEventRepository outboxEventRepository) {
         this.loyaltyAccountRepository = loyaltyAccountRepository;
         this.loyaltyTransactionRepository = loyaltyTransactionRepository;
         this.loyaltyRewardRepository = loyaltyRewardRepository;
         this.loyaltyRedemptionRepository = loyaltyRedemptionRepository;
+        this.outboxEventRepository = outboxEventRepository;
     }
 
     @Transactional(readOnly = true)
@@ -76,10 +80,18 @@ public class LoyaltyService {
     }
 
     @Transactional
-    public void redeemReward(Integer customerId, RedeemRewardRequest request) {
-        LoyaltyAccount account = loyaltyAccountRepository.findByCustomer_Id(customerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Loyalty account not found"));
+    public void redeemReward(Integer customerId, RedeemRewardRequest request, String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 180) {
+            throw new BusinessException("Idempotency-Key must contain between 1 and 180 characters");
+        }
 
+        outboxEventRepository.lockIdempotencyKey(idempotencyKey);
+        if (isIdempotentReplay(customerId, request.rewardId(), idempotencyKey)) {
+            return;
+        }
+
+        LoyaltyAccount account = loyaltyAccountRepository.findByCustomerIdForUpdate(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Loyalty account not found"));
         LoyaltyReward reward = loyaltyRewardRepository.findById(request.rewardId())
                 .orElseThrow(() -> new ResourceNotFoundException("Reward not found"));
 
@@ -109,7 +121,22 @@ public class LoyaltyService {
         transaction.setCreatedAt(LocalDateTime.now());
 
         loyaltyAccountRepository.save(account);
-        loyaltyRedemptionRepository.save(redemption);
+        loyaltyRedemptionRepository.saveAndFlush(redemption);
         loyaltyTransactionRepository.save(transaction);
+        outboxEventRepository.publishLoyaltyRedemption(
+                redemption.getId().toString(), customerId, request.rewardId(), reward.getPointsCost(), idempotencyKey
+        );
+    }
+
+    private boolean isIdempotentReplay(Integer customerId, Integer rewardId, String idempotencyKey) {
+        var previous = outboxEventRepository.findByIdempotencyKey(idempotencyKey);
+        if (previous.isEmpty()) {
+            return false;
+        }
+
+        if (!outboxEventRepository.isLoyaltyRedemptionFor(previous.get(), customerId, rewardId)) {
+            throw new ConflictException("Idempotency-Key was already used for a different request");
+        }
+        return true;
     }
 }
