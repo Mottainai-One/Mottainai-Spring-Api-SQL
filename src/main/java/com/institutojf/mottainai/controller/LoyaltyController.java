@@ -15,16 +15,20 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/v1/client/loyalty")
 @RequiredArgsConstructor
 public class LoyaltyController implements LoyaltyControllerApi {
+
     private final LoyaltyService loyaltyService;
+
     private final CustomerAccess customerAccess;
 
     @Override
@@ -35,14 +39,15 @@ public class LoyaltyController implements LoyaltyControllerApi {
 
     @Override
     @GetMapping("/transactions")
-    public List<LoyaltyTransactionResponse> getTransactions(Authentication authentication) {
-        return loyaltyService.getTransactions(customerAccess.currentCustomer(authentication).getId());
+    public List<LoyaltyTransactionResponse> getTransactions(Authentication authentication, @RequestParam LocalDateTime from, @RequestParam LocalDateTime to) {
+        return loyaltyService.getTransactions(customerAccess.currentCustomer(authentication).getId(), from, to);
     }
 
     @Override
     @PostMapping("/redeem")
     @ResponseStatus(HttpStatus.OK)
-    public void redeemReward(@Valid @RequestBody RedeemRewardRequest request, Authentication authentication, @RequestHeader("Idempotency-Key")String idempotencyKey) {
+    public void redeemReward(@Valid @RequestBody RedeemRewardRequest request, Authentication authentication, @RequestHeader("Idempotency-Key") String idempotencyKey) {
         loyaltyService.redeemReward(customerAccess.currentCustomer(authentication).getId(), request, idempotencyKey);
     }
+
 }

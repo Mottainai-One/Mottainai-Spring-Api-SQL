@@ -11,7 +11,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
 
+import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -20,6 +22,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "customer", schema = "mottainai")
 public class Customer {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "customer_id")
@@ -28,7 +31,8 @@ public class Customer {
     @Column(name = "full_name", nullable = false, length = 150)
     private String fullName;
 
-    @Column(length = 11)
+    @JdbcTypeCode(Types.CHAR)
+    @Column(length = 11, columnDefinition = "CHAR(11)")
     private String cpf;
 
     @Column(length = 150)
@@ -61,4 +65,5 @@ public class Customer {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
 }
