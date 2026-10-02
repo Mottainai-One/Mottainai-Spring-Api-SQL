@@ -11,6 +11,7 @@ import com.institutojf.mottainai.model.enums.MovementType;
 import com.institutojf.mottainai.repository.InventoryMovementRepository;
 import com.institutojf.mottainai.repository.InventoryRepository;
 import com.institutojf.mottainai.security.InventoryAccess;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,18 +21,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class InventoryMovementService {
     private final InventoryRepository inventoryRepository;
     private final InventoryMovementRepository inventoryMovementRepository;
     private final InventoryMovementMapper inventoryMovementMapper;
     private final InventoryAccess inventoryAccess;
-
-    public InventoryMovementService(InventoryRepository inventoryRepository, InventoryMovementRepository inventoryMovementRepository, InventoryMovementMapper inventoryMovementMapper, InventoryAccess inventoryAccess) {
-        this.inventoryRepository = inventoryRepository;
-        this.inventoryMovementRepository = inventoryMovementRepository;
-        this.inventoryMovementMapper = inventoryMovementMapper;
-        this.inventoryAccess = inventoryAccess;
-    }
 
     @Transactional
     public InventoryMovementResponse create(Integer inventoryId, CreateInventoryMovementRequest request, Authentication authentication) {

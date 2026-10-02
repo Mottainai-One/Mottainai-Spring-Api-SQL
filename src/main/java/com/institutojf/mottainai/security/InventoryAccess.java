@@ -4,16 +4,14 @@ import com.institutojf.mottainai.exception.BusinessException;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.repository.AppUserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class InventoryAccess {
     private final AppUserRepository appUserRepository;
-
-    public InventoryAccess(AppUserRepository appUserRepository) {
-        this.appUserRepository = appUserRepository;
-    }
 
     public AppUser currentUser(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated() || authentication.getName() == null) {

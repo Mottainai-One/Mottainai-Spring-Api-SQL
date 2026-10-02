@@ -2,15 +2,13 @@ package com.institutojf.mottainai.mapper;
 
 import com.institutojf.mottainai.dto.response.CompanyResponse;
 import com.institutojf.mottainai.model.Company;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 @Component
+@RequiredArgsConstructor
 public class CompanyMapper {
 
     private final SubscriptionPlanMapper subscriptionPlanMapper;
-
-    public CompanyMapper(SubscriptionPlanMapper subscriptionPlanMapper) {
-        this.subscriptionPlanMapper = subscriptionPlanMapper;
-    }
 
     public CompanyResponse toResponse(Company company) {
         return new CompanyResponse(

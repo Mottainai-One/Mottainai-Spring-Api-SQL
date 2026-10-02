@@ -11,6 +11,7 @@ import com.institutojf.mottainai.repository.ProductRepository;
 import com.institutojf.mottainai.repository.PromotionItemRepository;
 import com.institutojf.mottainai.repository.PromotionRepository;
 import com.institutojf.mottainai.security.InventoryAccess;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,19 +20,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class PromotionItemService {
 
     private final PromotionItemRepository promotionItemRepository;
     private final PromotionRepository promotionRepository;
     private final ProductRepository productRepository;
     private final InventoryAccess inventoryAccess;
-
-    public PromotionItemService(PromotionItemRepository promotionItemRepository, PromotionRepository promotionRepository, ProductRepository productRepository, InventoryAccess inventoryAccess) {
-        this.promotionItemRepository = promotionItemRepository;
-        this.promotionRepository = promotionRepository;
-        this.productRepository = productRepository;
-        this.inventoryAccess = inventoryAccess;
-    }
 
     @Transactional
     public PromotionItemResponse createPromotionItem(Integer promotionId, CreatePromotionItemRequest request, Authentication authentication) {

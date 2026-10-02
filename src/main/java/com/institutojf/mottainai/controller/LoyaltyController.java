@@ -7,6 +7,7 @@ import com.institutojf.mottainai.dto.response.LoyaltyTransactionResponse;
 import com.institutojf.mottainai.security.CustomerAccess;
 import com.institutojf.mottainai.service.LoyaltyService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,14 +22,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/client/loyalty")
+@RequiredArgsConstructor
 public class LoyaltyController implements LoyaltyControllerApi {
     private final LoyaltyService loyaltyService;
     private final CustomerAccess customerAccess;
-
-    public LoyaltyController(LoyaltyService loyaltyService, CustomerAccess customerAccess) {
-        this.loyaltyService = loyaltyService;
-        this.customerAccess = customerAccess;
-    }
 
     @Override
     @GetMapping("/balance")

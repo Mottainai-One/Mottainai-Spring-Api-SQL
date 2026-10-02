@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.request.CreatePromotionItemRequest;
 import com.institutojf.mottainai.dto.response.PromotionItemResponse;
 import com.institutojf.mottainai.service.PromotionItemService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,13 +22,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/promotions/{promotionId}/items")
+@RequiredArgsConstructor
 public class PromotionItemController implements PromotionItemControllerApi {
 
     private final PromotionItemService promotionItemService;
-
-    public PromotionItemController(PromotionItemService promotionItemService) {
-        this.promotionItemService = promotionItemService;
-    }
 
     @Override
     @GetMapping

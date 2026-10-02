@@ -11,6 +11,7 @@ import com.institutojf.mottainai.repository.AppUserRepository;
 import com.institutojf.mottainai.repository.AuditLogRepository;
 import com.institutojf.mottainai.repository.EmployeeRepository;
 import com.institutojf.mottainai.repository.EmployeeRoleRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import java.util.Locale;
 import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class EmployeeRoleService {
     private static final Set<String> AUTHORIZATION_ROLES = Set.of("ADMINISTRATOR", "MANAGER");
 
@@ -28,13 +30,6 @@ public class EmployeeRoleService {
     private final EmployeeRepository employeeRepository;
     private final AppUserRepository appUserRepository;
     private final AuditLogRepository auditLogRepository;
-
-    public EmployeeRoleService(EmployeeRoleRepository employeeRoleRepository, EmployeeRepository employeeRepository, AppUserRepository appUserRepository, AuditLogRepository auditLogRepository) {
-        this.employeeRoleRepository = employeeRoleRepository;
-        this.employeeRepository = employeeRepository;
-        this.appUserRepository = appUserRepository;
-        this.auditLogRepository = auditLogRepository;
-    }
 
     @Transactional(readOnly = true)
     public List<EmployeeRoleResponse> findAll() {

@@ -18,7 +18,10 @@ import org.springframework.security.core.Authentication;
 public interface TaxProfileControllerApi {
 
     @Operation(summary = "List active tax profiles")
-    @ApiResponse(responseCode = "200", description = "Tax profiles found", content = @Content(schema = @Schema(implementation = TaxProfileResponse.class)))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Tax profiles found", content = @Content(schema = @Schema(implementation = TaxProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Authentication required")
+    })
     ResponseEntity<Page<TaxProfileResponse>> findAll(Pageable pageable);
 
     @Operation(summary = "Get a tax profile with its tax rules")

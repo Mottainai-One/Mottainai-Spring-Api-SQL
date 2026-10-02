@@ -13,6 +13,7 @@ import com.institutojf.mottainai.model.RetailStore;
 import com.institutojf.mottainai.repository.AddressRepository;
 import com.institutojf.mottainai.repository.CompanyRepository;
 import com.institutojf.mottainai.repository.RetailStoreRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,19 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 
 @Service
+@RequiredArgsConstructor
 public class RetailStoreService {
 
     private final RetailStoreRepository retailStoreRepository;
     private final CompanyRepository companyRepository;
     private final AddressRepository addressRepository;
     private final RetailStoreMapper retailStoreMapper;
-
-    public RetailStoreService(RetailStoreRepository retailStoreRepository, CompanyRepository companyRepository, AddressRepository addressRepository, RetailStoreMapper retailStoreMapper) {
-        this.retailStoreRepository = retailStoreRepository;
-        this.companyRepository = companyRepository;
-        this.addressRepository = addressRepository;
-        this.retailStoreMapper = retailStoreMapper;
-    }
 
     @Transactional
     public RetailStoreResponse create(CreateRetailStoreRequest request) {

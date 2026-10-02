@@ -12,25 +12,20 @@ import com.institutojf.mottainai.model.Supplier;
 import com.institutojf.mottainai.repository.AddressRepository;
 import com.institutojf.mottainai.repository.SupplierProductRepository;
 import com.institutojf.mottainai.repository.SupplierRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class SupplierService {
 
     private final SupplierRepository supplierRepository;
     private final AddressRepository addressRepository;
     private final SupplierProductRepository supplierProductRepository;
     private final SupplierMapper supplierMapper;
-
-    public SupplierService(SupplierRepository supplierRepository, AddressRepository addressRepository, SupplierProductRepository supplierProductRepository, SupplierMapper supplierMapper) {
-        this.supplierRepository = supplierRepository;
-        this.addressRepository = addressRepository;
-        this.supplierProductRepository = supplierProductRepository;
-        this.supplierMapper = supplierMapper;
-    }
 
     @Transactional
     public SupplierResponse create(CreateSupplierRequest request) {
