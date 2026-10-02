@@ -8,28 +8,31 @@ import com.institutojf.mottainai.model.enums.AlertStatus;
 import com.institutojf.mottainai.model.RetailStore;
 import com.institutojf.mottainai.repository.AlertRepository;
 import com.institutojf.mottainai.repository.RetailStoreRepository;
+import com.institutojf.mottainai.security.InventoryAccess;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.security.core.Authentication;
+
 @Service
+@RequiredArgsConstructor
 public class AlertService {
 
     private final AlertRepository alertRepository;
+
     private final RetailStoreRepository retailStoreRepository;
 
-    public AlertService(AlertRepository alertRepository, RetailStoreRepository retailStoreRepository) {
-        this.alertRepository = alertRepository;
-        this.retailStoreRepository = retailStoreRepository;
-    }
+    private final InventoryAccess inventoryAccess;
 
     @Transactional
-    public AlertResponse createAlert(CreateAlertRequest request) {
+    public AlertResponse createAlert(CreateAlertRequest request, Authentication authentication) {
+        inventoryAccess.checkStoreAccess(authentication, request.storeId());
         RetailStore store = retailStoreRepository.findById(request.storeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Store not found"));
-
+            .orElseThrow(() -> new ResourceNotFoundException("Store not found"));
         Alert alert = new Alert();
         alert.setStore(store);
         alert.setTitle(request.title());
@@ -40,38 +43,38 @@ public class AlertService {
         alert.setGeneratedAt(LocalDateTime.now());
         alert.setCreatedAt(LocalDateTime.now());
         alert.setUpdatedAt(LocalDateTime.now());
-
         return AlertResponse.fromEntity(alertRepository.save(alert));
     }
 
     @Transactional(readOnly = true)
-    public List<AlertResponse> getAlertsByStore(Integer storeId) {
-        return alertRepository.findByStore_StoreIdOrderByGeneratedAtDesc(storeId).stream()
-                .map(AlertResponse::fromEntity)
-                .toList();
+    public List<AlertResponse> getAlertsByStore(Integer storeId, Authentication authentication) {
+        inventoryAccess.checkStoreAccess(authentication, storeId);
+        return alertRepository.findByStore_IdOrderByGeneratedAtDesc(storeId)
+            .stream()
+            .map(AlertResponse::fromEntity)
+            .toList();
     }
 
     @Transactional(readOnly = true)
-    public AlertResponse getAlertById(Integer id) {
-        Alert alert = alertRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Alert not found"));
+    public AlertResponse getAlertById(Integer id, Authentication authentication) {
+        Alert alert = alertRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Alert not found"));
+        inventoryAccess.checkStoreAccess(authentication, alert.getStore().getId());
         return AlertResponse.fromEntity(alert);
     }
 
     @Transactional
-    public AlertResponse resolveAlert(Integer id) {
-        Alert alert = alertRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Alert not found"));
-
-        alert.setStatus(AlertStatus.RESOLVED);
-        alert.setResolvedAt(LocalDateTime.now());
+    public AlertResponse updateStatus(Integer id, AlertStatus status, Authentication authentication) {
+        Alert alert = alertRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Alert not found"));
+        inventoryAccess.checkStoreAccess(authentication, alert.getStore().getId());
+        alert.setStatus(status);
+        alert.setResolvedAt(status == AlertStatus.RESOLVED ? LocalDateTime.now() : null);
         alert.setUpdatedAt(LocalDateTime.now());
-
         return AlertResponse.fromEntity(alertRepository.save(alert));
     }
 
     @Transactional(readOnly = true)
     public long countActiveAlerts(Integer storeId) {
-        return alertRepository.countByStore_StoreIdAndStatus(storeId, AlertStatus.ACTIVE);
+        return alertRepository.countByStore_IdAndStatus(storeId, AlertStatus.ACTIVE);
     }
+
 }

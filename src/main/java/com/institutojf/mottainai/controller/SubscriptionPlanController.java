@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.request.UpdateSubscriptionPlanRequest;
 import com.institutojf.mottainai.dto.response.SubscriptionPlanResponse;
 import com.institutojf.mottainai.service.SubscriptionPlanService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -24,13 +25,10 @@ import java.net.URI;
 @RestController
 @PreAuthorize("hasRole('ADMINISTRATOR')")
 @RequestMapping("/api/v1/subscription-plans")
+@RequiredArgsConstructor
 public class SubscriptionPlanController implements SubscriptionPlanControllerApi {
 
     private final SubscriptionPlanService subscriptionPlanService;
-
-    public SubscriptionPlanController(SubscriptionPlanService subscriptionPlanService) {
-        this.subscriptionPlanService = subscriptionPlanService;
-    }
 
     @Override
     @PostMapping
@@ -40,6 +38,7 @@ public class SubscriptionPlanController implements SubscriptionPlanControllerApi
         return ResponseEntity.created(location).body(plan);
     }
 
+    @Override
     @GetMapping
     public ResponseEntity<Page<SubscriptionPlanResponse>> findAll(Pageable pageable) {
         return ResponseEntity.ok(subscriptionPlanService.findAll(pageable));
@@ -51,14 +50,17 @@ public class SubscriptionPlanController implements SubscriptionPlanControllerApi
         return ResponseEntity.ok(subscriptionPlanService.findById(id));
     }
 
+    @Override
     @PutMapping("/{id}")
     public ResponseEntity<SubscriptionPlanResponse> update(@PathVariable Integer id, @Valid @RequestBody UpdateSubscriptionPlanRequest request) {
         return ResponseEntity.ok(subscriptionPlanService.update(id, request));
     }
 
+    @Override
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
         subscriptionPlanService.deactivate(id);
         return ResponseEntity.noContent().build();
     }
+
 }

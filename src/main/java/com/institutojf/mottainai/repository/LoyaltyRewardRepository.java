@@ -8,5 +8,7 @@ import java.util.List;
 
 @Repository
 public interface LoyaltyRewardRepository extends JpaRepository<LoyaltyReward, Integer> {
+
     List<LoyaltyReward> findByActiveTrueOrderByName();
+
 }

@@ -4,23 +4,25 @@ import com.institutojf.mottainai.exception.BusinessException;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.repository.AppUserRepository;
+import com.institutojf.mottainai.repository.RetailStoreRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class InventoryAccess {
+
     private final AppUserRepository appUserRepository;
 
-    public InventoryAccess(AppUserRepository appUserRepository) {
-        this.appUserRepository = appUserRepository;
-    }
+    private final RetailStoreRepository retailStoreRepository;
 
     public AppUser currentUser(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated() || authentication.getName() == null) {
             throw new BusinessException("Authenticated user required");
         }
         return appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     public AppUser user(Authentication authentication) {
@@ -37,6 +39,11 @@ public class InventoryAccess {
         if (isAdministrator(user)) {
             if (requestedStoreId == null) {
                 throw new BusinessException("Store id is required for administrators");
+            }
+            Integer companyId = user.getEmployee().getStore().getCompany().getId();
+            if (!retailStoreRepository.existsByIdAndCompany_IdAndActiveTrueAndDeletedAtIsNull(requestedStoreId,
+                    companyId)) {
+                throw new BusinessException("User cannot access this store");
             }
             return requestedStoreId;
         }
@@ -59,4 +66,5 @@ public class InventoryAccess {
     private boolean isAdministrator(AppUser user) {
         return "ADMINISTRATOR".equalsIgnoreCase(user.getEmployee().getRole().getName());
     }
+
 }

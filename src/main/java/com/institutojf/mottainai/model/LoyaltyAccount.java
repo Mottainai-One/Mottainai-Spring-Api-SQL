@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
 
 import lombok.Getter;
@@ -19,6 +20,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "loyalty_account")
 public class LoyaltyAccount {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "loyalty_account_id")
@@ -39,4 +41,5 @@ public class LoyaltyAccount {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
 }

@@ -7,12 +7,15 @@ import com.institutojf.mottainai.handler.ApiError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.Authentication;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Tag(name = "Loyalty", description = "Customer loyalty API")
 public interface LoyaltyControllerApi {
@@ -29,7 +32,7 @@ public interface LoyaltyControllerApi {
             @ApiResponse(responseCode = "200", description = "Loyalty transactions found", content = @Content(schema = @Schema(implementation = LoyaltyTransactionResponse.class))),
             @ApiResponse(responseCode = "404", description = "Customer or loyalty account not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    List<LoyaltyTransactionResponse> getTransactions(Authentication authentication);
+    List<LoyaltyTransactionResponse> getTransactions(Authentication authentication, LocalDateTime from, LocalDateTime to);
 
     @Operation(summary = "Redeem a reward for the authenticated customer")
     @ApiResponses({
@@ -37,5 +40,6 @@ public interface LoyaltyControllerApi {
             @ApiResponse(responseCode = "400", description = "Reward is inactive or balance is insufficient", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Customer, loyalty account, or reward not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    void redeemReward(RedeemRewardRequest request, Authentication authentication);
+    void redeemReward(RedeemRewardRequest request, Authentication authentication, @Parameter(name = "Idempotency-Key", in = ParameterIn.HEADER, required = true) String idempotencyKey);
+
 }

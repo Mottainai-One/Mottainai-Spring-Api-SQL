@@ -29,4 +29,6 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     boolean existsByBarcode(String barcode);
 
     boolean existsByCategory_IdAndActiveTrueAndDeletedAtIsNull(Integer categoryId);
+
+    boolean existsByTaxProfile_IdAndActiveTrueAndDeletedAtIsNull(Integer taxProfileId);
 }

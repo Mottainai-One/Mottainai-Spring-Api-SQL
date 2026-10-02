@@ -3,6 +3,10 @@ package com.institutojf.mottainai.controller.swagger;
 import com.institutojf.mottainai.dto.request.CreateSupplierRequest;
 import com.institutojf.mottainai.dto.request.UpdateSupplierRequest;
 import com.institutojf.mottainai.dto.response.SupplierResponse;
+import com.institutojf.mottainai.dto.request.LinkProductToSupplierRequest;
+import com.institutojf.mottainai.dto.request.UpdateSupplierProductRequest;
+import com.institutojf.mottainai.dto.response.SupplierProductResponse;
+import com.institutojf.mottainai.dto.response.SupplierPurchaseHistoryResponse;
 import com.institutojf.mottainai.handler.ApiError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,6 +17,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Tag(name = "Suppliers", description = "API for managing suppliers")
 public interface SupplierControllerApi {
@@ -55,4 +63,35 @@ public interface SupplierControllerApi {
             @ApiResponse(responseCode = "404", description = "Supplier not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     ResponseEntity<Void> deactivate(Integer id);
+
+    @Operation(summary = "List purchase history for a supplier")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<List<SupplierPurchaseHistoryResponse>> findHistory(Integer id, LocalDateTime from, LocalDateTime to);
+
+    @Operation(summary = "List products supplied by a supplier")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<Page<SupplierProductResponse>> findProducts(Integer id, Pageable pageable);
+
+    @Operation(summary = "Link a product to a supplier")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<SupplierProductResponse> linkProduct(Integer id, LinkProductToSupplierRequest request, Authentication authentication);
+
+    @Operation(summary = "Update commercial terms for a supplied product")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<SupplierProductResponse> updateProductLink(Integer id, Integer productId, UpdateSupplierProductRequest request, Authentication authentication);
+
+    @Operation(summary = "Deactivate a supplier-product link")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<Void> deactivateProductLink(Integer id, Integer productId, Authentication authentication);
+
 }

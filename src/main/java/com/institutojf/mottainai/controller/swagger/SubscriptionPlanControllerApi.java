@@ -54,4 +54,5 @@ public interface SubscriptionPlanControllerApi {
             @ApiResponse(responseCode = "404", description = "Subscription plan not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     ResponseEntity<Void> deactivate(Integer id);
+
 }

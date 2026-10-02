@@ -47,17 +47,32 @@ public interface PromotionControllerApi {
     })
     PromotionResponse updatePromotion(Integer id, UpdatePromotionRequest request, Authentication authentication);
 
-    @Operation(summary = "Activate a promotion")
+    @Operation(summary = "Delete a promotion")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Promotion activated", content = @Content(schema = @Schema(implementation = PromotionResponse.class))),
+            @ApiResponse(responseCode = "204", description = "Promotion deleted"),
             @ApiResponse(responseCode = "404", description = "Promotion not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    PromotionResponse activatePromotion(Integer id, Authentication authentication);
+    void deletePromotion(Integer id, Authentication authentication);
 
-    @Operation(summary = "Deactivate a promotion")
+    @Operation(summary = "Approve a promotion")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Promotion deactivated", content = @Content(schema = @Schema(implementation = PromotionResponse.class))),
+            @ApiResponse(responseCode = "200", description = "Promotion approved", content = @Content(schema = @Schema(implementation = PromotionResponse.class))),
             @ApiResponse(responseCode = "404", description = "Promotion not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    PromotionResponse deactivatePromotion(Integer id, Authentication authentication);
+    PromotionResponse approvePromotion(Integer id, Authentication authentication);
+
+    @Operation(summary = "Reject a promotion")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Promotion rejected", content = @Content(schema = @Schema(implementation = PromotionResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Promotion not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    PromotionResponse rejectPromotion(Integer id, Authentication authentication);
+
+    @Operation(summary = "Cancel a promotion")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Promotion cancelled", content = @Content(schema = @Schema(implementation = PromotionResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Promotion not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    PromotionResponse cancelPromotion(Integer id, Authentication authentication);
+
 }

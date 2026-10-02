@@ -6,10 +6,12 @@ import com.institutojf.mottainai.dto.request.UpdateCompanyRequest;
 import com.institutojf.mottainai.dto.response.CompanyResponse;
 import com.institutojf.mottainai.service.CompanyService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,13 +26,10 @@ import java.net.URI;
 @RestController
 @PreAuthorize("hasRole('ADMINISTRATOR')")
 @RequestMapping("/api/v1/companies")
+@RequiredArgsConstructor
 public class CompanyController implements CompanyControllerApi {
 
     private final CompanyService companyService;
-
-    public CompanyController(CompanyService companyService) {
-        this.companyService = companyService;
-    }
 
     @Override
     @PostMapping
@@ -40,6 +39,7 @@ public class CompanyController implements CompanyControllerApi {
         return ResponseEntity.created(location).body(company);
     }
 
+    @Override
     @GetMapping
     public ResponseEntity<Page<CompanyResponse>> findAll(Pageable pageable) {
         return ResponseEntity.ok(companyService.findAll(pageable));
@@ -51,14 +51,17 @@ public class CompanyController implements CompanyControllerApi {
         return ResponseEntity.ok(companyService.findById(id));
     }
 
+    @Override
     @PutMapping("/{id}")
     public ResponseEntity<CompanyResponse> update(@PathVariable Integer id, @Valid @RequestBody UpdateCompanyRequest request) {
         return ResponseEntity.ok(companyService.update(id, request));
     }
 
+    @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
-        companyService.deactivate(id);
+    public ResponseEntity<Void> deactivate(@PathVariable Integer id, Authentication authentication) {
+        companyService.deactivate(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
+
 }
