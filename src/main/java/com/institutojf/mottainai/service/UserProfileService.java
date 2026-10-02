@@ -15,6 +15,7 @@ import com.institutojf.mottainai.repository.AppUserRepository;
 import com.institutojf.mottainai.repository.AuditLogRepository;
 import com.institutojf.mottainai.repository.EmployeeRepository;
 import com.institutojf.mottainai.repository.EmployeeRoleRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class UserProfileService {
     private final AppUserRepository appUserRepository;
     private final EmployeeRepository employeeRepository;
@@ -32,15 +34,6 @@ public class UserProfileService {
     private final RetailStoreMapper retailStoreMapper;
     private final PasswordEncoder passwordEncoder;
     private final SecureRandom secureRandom = new SecureRandom();
-
-    public UserProfileService(AppUserRepository appUserRepository, EmployeeRepository employeeRepository, EmployeeRoleRepository employeeRoleRepository, AuditLogRepository auditLogRepository, RetailStoreMapper retailStoreMapper, PasswordEncoder passwordEncoder) {
-        this.appUserRepository = appUserRepository;
-        this.employeeRepository = employeeRepository;
-        this.employeeRoleRepository = employeeRoleRepository;
-        this.auditLogRepository = auditLogRepository;
-        this.retailStoreMapper = retailStoreMapper;
-        this.passwordEncoder = passwordEncoder;
-    }
 
     @Transactional(readOnly = true)
     public UserResponse me(String email) {
@@ -142,8 +135,7 @@ public class UserProfileService {
     private UserResponse toResponse(AppUser user) {
         Employee employee = user.getEmployee();
         return new UserResponse(user.getId(), employee.getName(), maskCpf(employee.getCpf()), user.getEmail(),
-                employee.getPhone(), employee.getRole().getName(), user.getActive(), employee.getStore().getId(),
-                user.getFirebaseUid());
+                employee.getPhone(), employee.getRole().getName(), user.getActive(), employee.getStore().getId());
     }
 
     private String maskCpf(String cpf) {
