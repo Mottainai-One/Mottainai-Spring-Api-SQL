@@ -1,7 +1,6 @@
 package com.institutojf.mottainai.controller;
 
 import com.institutojf.mottainai.controller.swagger.InventoryControllerApi;
-
 import com.institutojf.mottainai.dto.request.CreateInventoryMovementRequest;
 import com.institutojf.mottainai.dto.request.CreateInventoryRequest;
 import com.institutojf.mottainai.dto.request.UpdateInventoryRequest;
@@ -21,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,7 +33,9 @@ import java.util.List;
 @RequestMapping("/api/v1/inventory")
 @RequiredArgsConstructor
 public class InventoryController implements InventoryControllerApi {
+
     private final InventoryService inventoryService;
+
     private final InventoryMovementService inventoryMovementService;
 
     @Override
@@ -52,6 +54,9 @@ public class InventoryController implements InventoryControllerApi {
     @PostMapping
     public ResponseEntity<InventoryResponse> create(@Valid @RequestBody CreateInventoryRequest request, Authentication authentication) {
         InventoryResponse inventory = inventoryService.create(request, authentication);
+        if (inventory.reactivated()) {
+            return ResponseEntity.ok(inventory);
+        }
         return ResponseEntity.created(URI.create("/api/v1/inventory/" + inventory.id())).body(inventory);
     }
 
@@ -82,20 +87,17 @@ public class InventoryController implements InventoryControllerApi {
 
     @Override
     @GetMapping("/{id}/movements")
-    public ResponseEntity<List<InventoryMovementResponse>> findMovements(
-            @PathVariable Integer id,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
-            Authentication authentication
-    ) {
+    public ResponseEntity<List<InventoryMovementResponse>> findMovements(@PathVariable Integer id, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to, Authentication authentication) {
         return ResponseEntity.ok(inventoryMovementService.findByInventory(id, from, to, authentication));
     }
 
     @Override
     @PostMapping("/{id}/movements")
-    public ResponseEntity<InventoryMovementResponse> createMovement(@PathVariable Integer id, @Valid @RequestBody CreateInventoryMovementRequest request, Authentication authentication) {
-        InventoryMovementResponse movement = inventoryMovementService.create(id, request, authentication);
+    public ResponseEntity<InventoryMovementResponse> createMovement(@PathVariable Integer id, @Valid @RequestBody CreateInventoryMovementRequest request, @RequestHeader("Idempotency-Key") String idempotencyKey, Authentication authentication) {
+        InventoryMovementResponse movement = inventoryMovementService.create(id, request, idempotencyKey,
+                authentication);
         return ResponseEntity.created(URI.create("/api/v1/inventory/" + id + "/movements/" + movement.id()))
-                .body(movement);
+            .body(movement);
     }
+
 }
