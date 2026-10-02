@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import java.util.Optional;
 
 public interface TaxProfileRepository extends JpaRepository<TaxProfile, Integer> {
+
     Optional<TaxProfile> findByIdAndActiveTrueAndDeletedAtIsNull(Integer id);
 
     Optional<TaxProfile> findByIdAndDeletedAtIsNull(Integer id);
@@ -17,4 +18,5 @@ public interface TaxProfileRepository extends JpaRepository<TaxProfile, Integer>
     boolean existsByCodeIgnoreCase(String code);
 
     Page<TaxProfile> findAllByActiveTrueAndDeletedAtIsNull(Pageable pageable);
+
 }

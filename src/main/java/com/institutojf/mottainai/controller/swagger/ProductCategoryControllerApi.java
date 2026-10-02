@@ -54,4 +54,5 @@ public interface ProductCategoryControllerApi {
             @ApiResponse(responseCode = "404", description = "Product category not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     ResponseEntity<Void> deactivate(Integer id);
+
 }

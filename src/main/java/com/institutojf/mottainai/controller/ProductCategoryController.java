@@ -36,6 +36,7 @@ public class ProductCategoryController implements ProductCategoryControllerApi {
         return ResponseEntity.created(location).body(category);
     }
 
+    @Override
     @GetMapping
     public ResponseEntity<Page<ProductCategoryResponse>> findAll(Pageable pageable) {
         return ResponseEntity.ok(categoryService.findAll(pageable));
@@ -47,14 +48,17 @@ public class ProductCategoryController implements ProductCategoryControllerApi {
         return ResponseEntity.ok(categoryService.findById(id));
     }
 
+    @Override
     @PutMapping("/{id}")
     public ResponseEntity<ProductCategoryResponse> update(@PathVariable Integer id, @Valid @RequestBody UpdateProductCategoryRequest request) {
         return ResponseEntity.ok(categoryService.update(id, request));
     }
 
+    @Override
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
         categoryService.deactivate(id);
         return ResponseEntity.noContent().build();
     }
+
 }
