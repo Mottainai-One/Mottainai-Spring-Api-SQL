@@ -49,11 +49,8 @@ class SubscriptionPlanServiceTest {
     void shouldCreatePlanWhenNameIsAvailable() {
         when(subscriptionPlanRepository.existsByNameIgnoreCase("Basic")).thenReturn(false);
         when(subscriptionPlanRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        subscriptionPlanService.create(new CreateSubscriptionPlanRequest(
-                "Basic", "Entry plan", new BigDecimal("99.90"), 2, 5
-        ));
-
+        subscriptionPlanService
+            .create(new CreateSubscriptionPlanRequest("Basic", "Entry plan", new BigDecimal("99.90"), 2, 5));
         verify(subscriptionPlanRepository).save(any());
     }
 
@@ -61,11 +58,8 @@ class SubscriptionPlanServiceTest {
     @DisplayName("Should reject plan when name already exists")
     void shouldRejectPlanWhenNameAlreadyExists() {
         when(subscriptionPlanRepository.existsByNameIgnoreCase("Basic")).thenReturn(true);
-
-        assertThrows(ConflictException.class, () -> subscriptionPlanService.create(
-                new CreateSubscriptionPlanRequest("Basic", "Entry plan", new BigDecimal("99.90"), 2, 5)
-        ));
-
+        assertThrows(ConflictException.class, () -> subscriptionPlanService
+            .create(new CreateSubscriptionPlanRequest("Basic", "Entry plan", new BigDecimal("99.90"), 2, 5)));
         verify(subscriptionPlanRepository, never()).save(any());
     }
 
@@ -74,11 +68,8 @@ class SubscriptionPlanServiceTest {
     void shouldRejectPlanUpdateWhenNameBelongsToAnotherPlan() {
         when(subscriptionPlanRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(plan(1, true)));
         when(subscriptionPlanRepository.existsByNameIgnoreCaseAndIdNot("Premium", 1)).thenReturn(true);
-
-        assertThrows(ConflictException.class, () -> subscriptionPlanService.update(
-                1, new UpdateSubscriptionPlanRequest("Premium", "Top plan", new BigDecimal("199.90"), 10, 50, true)
-        ));
-
+        assertThrows(ConflictException.class, () -> subscriptionPlanService.update(1,
+                new UpdateSubscriptionPlanRequest("Premium", "Top plan", new BigDecimal("199.90"), 10, 50, true)));
         verify(subscriptionPlanRepository, never()).save(any());
     }
 
@@ -89,11 +80,8 @@ class SubscriptionPlanServiceTest {
         when(subscriptionPlanRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(plan));
         when(subscriptionPlanRepository.existsByNameIgnoreCaseAndIdNot("Premium", 1)).thenReturn(false);
         when(subscriptionPlanRepository.save(plan)).thenReturn(plan);
-
-        subscriptionPlanService.update(
-                1, new UpdateSubscriptionPlanRequest("Premium", "Top plan", new BigDecimal("199.90"), 10, 50, true)
-        );
-
+        subscriptionPlanService.update(1,
+                new UpdateSubscriptionPlanRequest("Premium", "Top plan", new BigDecimal("199.90"), 10, 50, true));
         assertEquals("Premium", plan.getName());
         assertEquals(10, plan.getStoreLimit());
         assertTrue(plan.getActive());
@@ -106,9 +94,7 @@ class SubscriptionPlanServiceTest {
         SubscriptionPlan plan = plan(1, true);
         when(subscriptionPlanRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(plan));
         when(companyRepository.existsByPlan_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(false);
-
         subscriptionPlanService.deactivate(1);
-
         assertFalse(plan.getActive());
         assertNull(plan.getDeletedAt());
         verify(subscriptionPlanRepository).save(plan);
@@ -117,11 +103,10 @@ class SubscriptionPlanServiceTest {
     @Test
     @DisplayName("Should reject plan deactivation when it has active companies")
     void shouldRejectPlanDeactivationWhenItHasActiveCompanies() {
-        when(subscriptionPlanRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(plan(1, true)));
+        when(subscriptionPlanRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1))
+            .thenReturn(Optional.of(plan(1, true)));
         when(companyRepository.existsByPlan_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(true);
-
         assertThrows(BusinessException.class, () -> subscriptionPlanService.deactivate(1));
-
         verify(subscriptionPlanRepository, never()).save(any());
     }
 
@@ -129,9 +114,7 @@ class SubscriptionPlanServiceTest {
     @DisplayName("Should return not found when deactivating a nonexistent plan")
     void shouldReturnNotFoundWhenDeactivatingANonexistentPlan() {
         when(subscriptionPlanRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.empty());
-
         assertThrows(ResourceNotFoundException.class, () -> subscriptionPlanService.deactivate(1));
-
         verify(subscriptionPlanRepository, never()).save(any());
     }
 
@@ -145,4 +128,5 @@ class SubscriptionPlanServiceTest {
         plan.setActive(active);
         return plan;
     }
+
 }
