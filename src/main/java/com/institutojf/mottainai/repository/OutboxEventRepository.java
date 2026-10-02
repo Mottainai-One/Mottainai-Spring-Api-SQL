@@ -88,6 +88,11 @@ public class OutboxEventRepository {
         );
     }
 
-    public record Event(String eventType, String aggregateType, String aggregateId, String eventData) {
+    public record Event(
+            String eventType,
+            String aggregateType,
+            String aggregateId,
+            String eventData
+    ) {
     }
 }
