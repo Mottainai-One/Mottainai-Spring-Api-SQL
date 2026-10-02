@@ -20,6 +20,7 @@ import java.util.Locale;
 public class DatabaseUserDetailsService implements UserDetailsService {
 
     private final AppUserRepository appUserRepository;
+
     private final RlsContextService rlsContextService;
 
     // Valida o CPF e inicializa o contexto RLS antes de buscar a conta
@@ -30,22 +31,17 @@ public class DatabaseUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("Invalid CPF or password");
         }
         AppUser user = appUserRepository.findByEmployee_CpfAndActiveTrueAndDeletedAtIsNull(cpf)
-                .filter(this::hasActiveEmployment)
-                .orElseThrow(() -> new UsernameNotFoundException("Invalid CPF or password"));
-
+            .filter(this::hasActiveEmployment)
+            .orElseThrow(() -> new UsernameNotFoundException("Invalid CPF or password"));
         String role = user.getEmployee().getRole().getName().toUpperCase(Locale.ROOT);
-        return User.withUsername(user.getEmail())
-                .password(user.getPasswordHash())
-                .authorities("ROLE_" + role)
-                .build();
+        return User.withUsername(user.getEmail()).password(user.getPasswordHash()).authorities("ROLE_" + role).build();
     }
 
     private boolean hasActiveEmployment(AppUser user) {
         Employee employee = user.getEmployee();
         EmployeeRole role = employee.getRole();
-        return Boolean.TRUE.equals(employee.getActive())
-                && employee.getDeletedAt() == null
-                && Boolean.TRUE.equals(role.getActive())
-                && role.getDeletedAt() == null;
+        return Boolean.TRUE.equals(employee.getActive()) && employee.getDeletedAt() == null
+                && Boolean.TRUE.equals(role.getActive()) && role.getDeletedAt() == null;
     }
+
 }

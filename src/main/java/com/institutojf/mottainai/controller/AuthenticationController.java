@@ -32,6 +32,7 @@ import java.util.UUID;
 public class AuthenticationController implements AuthenticationControllerApi {
 
     private final AuthenticationService authenticationService;
+
     private final UserProfileService userProfileService;
 
     @Override
@@ -48,7 +49,7 @@ public class AuthenticationController implements AuthenticationControllerApi {
 
     // Solicita o envio do link de recuperação para o email e CPF informados
     @Override
-    @PostMapping("/password-recovery")
+    @PutMapping("/password-recovery")
     public ResponseEntity<Void> passwordRecovery(@Valid @RequestBody ForgotPasswordRequest request) {
         authenticationService.requestPasswordReset(request);
         return ResponseEntity.noContent().build();
@@ -89,4 +90,5 @@ public class AuthenticationController implements AuthenticationControllerApi {
         authenticationService.changePassword(request, authentication.getName());
         return ResponseEntity.noContent().build();
     }
+
 }

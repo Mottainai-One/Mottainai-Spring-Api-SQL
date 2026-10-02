@@ -24,19 +24,23 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class EmployeeRoleService {
+
     private static final Set<String> AUTHORIZATION_ROLES = Set.of("ADMINISTRATOR", "MANAGER");
 
     private final EmployeeRoleRepository employeeRoleRepository;
+
     private final EmployeeRepository employeeRepository;
+
     private final AppUserRepository appUserRepository;
+
     private final AuditLogRepository auditLogRepository;
 
     @Transactional(readOnly = true)
     public List<EmployeeRoleResponse> findAll() {
         return employeeRoleRepository.findAllByActiveTrueAndDeletedAtIsNullOrderByPermissionLevelDescNameAsc()
-                .stream()
-                .map(this::toResponse)
-                .toList();
+            .stream()
+            .map(this::toResponse)
+            .toList();
     }
 
     @Transactional(readOnly = true)
@@ -97,13 +101,13 @@ public class EmployeeRoleService {
 
     private EmployeeRole findActiveRole(Integer id) {
         return employeeRoleRepository.findByIdAndDeletedAtIsNull(id)
-                .filter(role -> Boolean.TRUE.equals(role.getActive()))
-                .orElseThrow(() -> new ResourceNotFoundException("Employee role not found"));
+            .filter(role -> Boolean.TRUE.equals(role.getActive()))
+            .orElseThrow(() -> new ResourceNotFoundException("Employee role not found"));
     }
 
     private AppUser findActor(String email) {
         return appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
     }
 
     private void apply(EmployeeRole role, EmployeeRoleRequest request, LocalDateTime updatedAt) {
@@ -114,8 +118,7 @@ public class EmployeeRoleService {
     }
 
     private EmployeeRoleResponse toResponse(EmployeeRole role) {
-        return new EmployeeRoleResponse(role.getId(), role.getName(), role.getDescription(),
-                role.getPermissionLevel(), role.getActive());
+        return new EmployeeRoleResponse(role.getId(), role.getName(), role.getDescription(), role.getPermissionLevel(), role.getActive());
     }
 
     private EmployeeRoleAudit toAuditData(EmployeeRole role) {
@@ -124,4 +127,5 @@ public class EmployeeRoleService {
 
     private record EmployeeRoleAudit(String name, String description, Integer permissionLevel, Boolean active) {
     }
+
 }
