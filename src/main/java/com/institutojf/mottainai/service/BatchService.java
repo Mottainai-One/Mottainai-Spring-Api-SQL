@@ -11,6 +11,7 @@ import com.institutojf.mottainai.model.Product;
 import com.institutojf.mottainai.repository.BatchRepository;
 import com.institutojf.mottainai.repository.ProductRepository;
 import com.institutojf.mottainai.security.InventoryAccess;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,18 +19,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class BatchService {
-    private final BatchRepository batchRepository;
-    private final ProductRepository productRepository;
-    private final BatchMapper batchMapper;
-    private final InventoryAccess inventoryAccess;
 
-    public BatchService(BatchRepository batchRepository, ProductRepository productRepository, BatchMapper batchMapper, InventoryAccess inventoryAccess) {
-        this.batchRepository = batchRepository;
-        this.productRepository = productRepository;
-        this.batchMapper = batchMapper;
-        this.inventoryAccess = inventoryAccess;
-    }
+    private final BatchRepository batchRepository;
+
+    private final ProductRepository productRepository;
+
+    private final BatchMapper batchMapper;
+
+    private final InventoryAccess inventoryAccess;
 
     @Transactional
     public BatchResponse create(CreateBatchRequest request, Authentication authentication) {
@@ -44,7 +43,7 @@ public class BatchService {
             throw new BusinessException("Expiration date cannot be in the past");
         }
         Product product = productRepository.findByIdAndActiveTrueAndDeletedAtIsNull(request.productId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         Batch batch = new Batch();
         batch.setProduct(product);
         batch.setReceivingItemId(request.receivingItemId());
@@ -66,7 +65,17 @@ public class BatchService {
     public BatchResponse findById(Integer id, Authentication authentication) {
         inventoryAccess.requireAdministrator(authentication);
         Batch batch = batchRepository.findByIdAndActiveTrueAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Batch not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Batch not found"));
         return batchMapper.toResponse(batch);
     }
+
+    @Transactional
+    public BatchResponse updateStatus(Integer id, Boolean active, Authentication authentication) {
+        inventoryAccess.requireAdministrator(authentication);
+        Batch batch = batchRepository.findByIdAndDeletedAtIsNull(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Batch not found"));
+        batch.setActive(active);
+        return batchMapper.toResponse(batchRepository.save(batch));
+    }
+
 }

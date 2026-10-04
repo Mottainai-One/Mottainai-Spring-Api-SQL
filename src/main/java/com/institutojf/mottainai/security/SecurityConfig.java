@@ -1,7 +1,8 @@
 package com.institutojf.mottainai.security;
 
-import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.repository.AppUserRepository;
+import com.institutojf.mottainai.repository.CustomerAuthRepository;
+import com.institutojf.mottainai.service.RlsContextService;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -39,27 +41,35 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.expression.WebExpressionAuthorizationManager;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
-@EnableConfigurationProperties({JwtProperties.class, FirebaseProperties.class})
+@EnableMethodSecurity(proxyTargetClass = true)
+@EnableTransactionManagement(order = Ordered.HIGHEST_PRECEDENCE)
+@EnableConfigurationProperties({ JwtProperties.class, FirebaseProperties.class })
 public class SecurityConfig {
-    private static final String FIREBASE_JWK_SET_URI =
-            "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
+
+    private static final String FIREBASE_JWK_SET_URI = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
 
     private final JwtProperties jwtProperties;
+
     private final FirebaseProperties firebaseProperties;
+
     private final AppUserRepository appUserRepository;
+
     private final List<String> allowedOrigins;
 
     public SecurityConfig(JwtProperties jwtProperties, AppUserRepository appUserRepository) {
@@ -76,51 +86,60 @@ public class SecurityConfig {
         this.firebaseProperties = firebaseProperties;
         this.appUserRepository = appUserRepository;
         this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
-                .filter(origin -> !origin.isEmpty())
-                .toList();
+            .map(String::trim)
+            .filter(origin -> !origin.isEmpty())
+            .toList();
     }
 
     @Bean
     @Order(1)
     public SecurityFilterChain clientSecurityFilterChain(HttpSecurity http) throws Exception {
         http.securityMatcher("/api/v1/client/**")
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(firebaseJwtDecoder())));
-
+            .csrf(AbstractHttpConfigurer::disable)
+            .cors(Customizer.withDefaults())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(firebaseJwtDecoder())));
         return http.build();
     }
 
     @Bean
     @Order(2)
-    public SecurityFilterChain staffSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/reset-password",
-                                "/api-docs/**",
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/actuator/health"
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/**").hasAnyRole("ADMINISTRATOR", "MANAGER")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/**").hasAnyRole("ADMINISTRATOR", "MANAGER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/**").hasAnyRole("ADMINISTRATOR", "MANAGER")
-                        .anyRequest().authenticated()
-                )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                );
-
+    public SecurityFilterChain staffSecurityFilterChain(HttpSecurity http, RlsContextService rlsContextService,
+            CustomerAuthRepository customerAuthRepository) throws Exception {
+        http.csrf(AbstractHttpConfigurer::disable)
+            .cors(Customizer.withDefaults())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/api/v1/customers/auth/profile")
+                .hasRole("CUSTOMER")
+                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/password-recovery",
+                        "/api/v1/auth/password-reset", "/api/v1/auth/password-reset/validate",
+                        "/api/v1/customers/auth/**", "/api-docs/**", "/swagger-ui.html", "/swagger-ui/**",
+                        "/actuator/health")
+                .permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/customers")
+                .permitAll()
+                .requestMatchers("/api/v1/customers/**", "/api/v1/loyalty/**")
+                .authenticated()
+                .requestMatchers("/api/v1/auth/logout", "/api/v1/auth/password")
+                .authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/**")
+                .access(new WebExpressionAuthorizationManager("isAuthenticated() and !hasRole('CUSTOMER')"))
+                .requestMatchers(HttpMethod.POST, "/api/v1/**")
+                .hasAnyRole("ADMINISTRATOR", "MANAGER")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/**")
+                .hasAnyRole("ADMINISTRATOR", "MANAGER")
+                .requestMatchers(HttpMethod.PATCH, "/api/v1/**")
+                .hasAnyRole("ADMINISTRATOR", "MANAGER")
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/**")
+                .hasAnyRole("ADMINISTRATOR", "MANAGER")
+                .anyRequest()
+                .authenticated())
+            .oauth2ResourceServer(
+                    oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+            .addFilterAfter(new StaffAccessFilter(rlsContextService, customerAuthRepository),
+                    BearerTokenAuthenticationFilter.class);
         return http.build();
     }
 
@@ -128,11 +147,10 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key"));
         configuration.setExposedHeaders(List.of("Location"));
         configuration.setAllowCredentials(false);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
         return source;
@@ -158,12 +176,9 @@ public class SecurityConfig {
     @Bean
     public JwtDecoder jwtDecoder() {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtSecretKey())
-                .macAlgorithm(MacAlgorithm.HS256)
-                .build();
-        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                JwtValidators.createDefaultWithIssuer(jwtProperties.issuer()),
-                tokenVersionValidator()
-        ));
+            .macAlgorithm(MacAlgorithm.HS256)
+            .build();
+        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(jwtProperties.issuer()));
         return decoder;
     }
 
@@ -171,11 +186,10 @@ public class SecurityConfig {
         String firebaseIssuer = "https://securetoken.google.com/" + firebaseProperties.projectId();
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(FIREBASE_JWK_SET_URI).build();
         OAuth2TokenValidator<Jwt> audienceValidator = jwt -> jwt.getAudience().contains(firebaseProperties.projectId())
-                ? OAuth2TokenValidatorResult.success()
-                : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Invalid Firebase audience", null));
+                ? OAuth2TokenValidatorResult.success() : OAuth2TokenValidatorResult
+                    .failure(new OAuth2Error("invalid_token", "Invalid Firebase audience", null));
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                JwtValidators.createDefaultWithIssuer(firebaseIssuer), audienceValidator
-        ));
+                JwtValidators.createDefaultWithIssuer(firebaseIssuer), audienceValidator));
         return decoder;
     }
 
@@ -189,35 +203,6 @@ public class SecurityConfig {
         return authenticationConverter;
     }
 
-    /**
-     * Compara a versão do JWT com a versão atual do usuário
-     * Quando a senha muda, tokens antigos deixam de funcionar
-     */
-    private OAuth2TokenValidator<Jwt> tokenVersionValidator() {
-        return jwt -> appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(jwt.getSubject())
-                .filter(user -> hasCurrentTokenVersion(user, jwt))
-                .map(user -> OAuth2TokenValidatorResult.success())
-                .orElseGet(() -> OAuth2TokenValidatorResult.failure(
-                        new OAuth2Error("invalid_token", "Token is no longer valid", null)
-                ));
-    }
-
-    private boolean hasCurrentTokenVersion(AppUser user, Jwt jwt) {
-        Object tokenVersion = jwt.getClaim("tokenVersion");
-        if (!(tokenVersion instanceof Number version) || user.getTokenVersion() == null
-                || user.getTokenVersion() != version.intValue()) {
-            return false;
-        }
-        if (user.getEmployee() == null) {
-            return true;
-        }
-        return Boolean.TRUE.equals(user.getEmployee().getActive())
-                && user.getEmployee().getDeletedAt() == null
-                && user.getEmployee().getRole() != null
-                && Boolean.TRUE.equals(user.getEmployee().getRole().getActive())
-                && user.getEmployee().getRole().getDeletedAt() == null;
-    }
-
     private SecretKey jwtSecretKey() {
         try {
             byte[] secret = Base64.getDecoder().decode(jwtProperties.secret());
@@ -229,4 +214,5 @@ public class SecurityConfig {
             throw new IllegalStateException("JWT secret must be Base64 encoded", exception);
         }
     }
+
 }

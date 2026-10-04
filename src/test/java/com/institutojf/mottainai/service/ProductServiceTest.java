@@ -104,11 +104,7 @@ class ProductServiceTest {
         when(categoryRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(category()));
         when(taxProfileRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(taxProfile()));
         when(productRepository.save(product)).thenReturn(product);
-
-        productService.update(1, new UpdateProductRequest(
-                1, 1, "12345678", null, "Brown rice", "Whole grain", "Mottainai", "KG", new BigDecimal("1.25"), true
-        ));
-
+        productService.update(1, new UpdateProductRequest(1, 1, "12345678", null, "Brown rice", "Whole grain", "Mottainai", "KG", new BigDecimal("1.25"), true, 1));
         assertEquals("12345678", product.getNcm());
         assertEquals("Brown rice", product.getName());
         assertTrue(product.getActive());
@@ -121,9 +117,20 @@ class ProductServiceTest {
         when(productRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(product));
         when(supplierProductRepository.existsByProduct_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(true);
 
-        assertThrows(BusinessException.class, () -> productService.deactivate(1));
-
+        assertThrows(BusinessException.class, () -> productService.delete(1, "admin@example.com"));
         verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should change product status without updating product fields")
+    void shouldChangeProductStatusWithoutUpdatingProductFields() {
+        Product product = product(1, true);
+        when(productRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(product));
+        when(productRepository.save(product)).thenReturn(product);
+        productService.updateStatus(1, false);
+        assertEquals(false, product.getActive());
+        assertEquals("Rice", product.getName());
+        verify(productRepository).save(product);
     }
 
     private CreateProductRequest createRequest() {
@@ -165,4 +172,5 @@ class ProductServiceTest {
     private ProductResponse response() {
         return new ProductResponse(1, 1, "Food", 1, "RIC-001", "123", "12345678", null, "Rice", null, null, "KG", BigDecimal.ONE, true, 1);
     }
+
 }

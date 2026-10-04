@@ -14,12 +14,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -45,66 +47,58 @@ class CompanyControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(companyController)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build();
+            .setControllerAdvice(new GlobalExceptionHandler())
+            .build();
     }
 
     @Test
     @DisplayName("Should create company with location header")
     void shouldCreateCompanyWithLocationHeader() throws Exception {
         when(companyService.create(any())).thenReturn(response());
-
-        mockMvc.perform(post("/api/v1/companies")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request())))
-                .andExpect(status().isCreated())
-                .andExpect(header().string("Location", "/api/v1/companies/1"))
-                .andExpect(jsonPath("$.officialName").value("Mottainai Comercio LTDA"));
-
+        mockMvc.perform(post("/api/v1/companies").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request())))
+            .andExpect(status().isCreated())
+            .andExpect(header().string("Location", "/api/v1/companies/1"))
+            .andExpect(jsonPath("$.officialName").value("Mottainai Comercio LTDA"));
         verify(companyService).create(any());
     }
 
     @Test
     @DisplayName("Should reject company with invalid CNPJ format")
     void shouldRejectCompanyWithInvalidCnpjFormat() throws Exception {
-        mockMvc.perform(post("/api/v1/companies")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"planId\":1,\"officialName\":\"Mottainai\",\"cnpj\":\"invalid\",\"email\":\"contato@mottainai.com\"}"))
-                .andExpect(status().isBadRequest());
-
+        mockMvc.perform(post("/api/v1/companies").contentType(MediaType.APPLICATION_JSON)
+            .content(
+                    "{\"planId\":1,\"officialName\":\"Mottainai\",\"cnpj\":\"invalid\",\"email\":\"contato@mottainai.com\"}"))
+            .andExpect(status().isBadRequest());
         verify(companyService, never()).create(any());
     }
 
     @Test
     @DisplayName("Should reject company with latitude outside valid range")
     void shouldRejectCompanyWithInvalidLatitude() throws Exception {
-        mockMvc.perform(post("/api/v1/companies")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"planId\":1,\"officialName\":\"Mottainai\",\"cnpj\":\"11222333000181\",\"email\":\"contato@mottainai.com\",\"latitude\":91}"))
-                .andExpect(status().isBadRequest());
-
+        mockMvc.perform(post("/api/v1/companies").contentType(MediaType.APPLICATION_JSON)
+            .content(
+                    "{\"planId\":1,\"officialName\":\"Mottainai\",\"cnpj\":\"11222333000181\",\"email\":\"contato@mottainai.com\",\"latitude\":91}"))
+            .andExpect(status().isBadRequest());
         verify(companyService, never()).create(any());
     }
 
     @Test
     @DisplayName("Should deactivate company with no content response")
     void shouldDeactivateCompanyWithNoContentResponse() throws Exception {
-        mockMvc.perform(delete("/api/v1/companies/1"))
-                .andExpect(status().isNoContent());
-
-        verify(companyService).deactivate(1);
+        mockMvc.perform(delete("/api/v1/companies/1")
+            .principal(new UsernamePasswordAuthenticationToken("admin@mottainai.com", null)))
+            .andExpect(status().isNoContent());
+        verify(companyService).delete(eq(1), any());
     }
 
     private CreateCompanyRequest request() {
-        return new CreateCompanyRequest(
-                1, "Mottainai Comercio LTDA", "Mottainai", "11222333000181", "contato@mottainai.com", "11999999999", null, null
-        );
+        return new CreateCompanyRequest(1, "Mottainai Comercio LTDA", "Mottainai", "11222333000181", "contato@mottainai.com", "11999999999", null, null);
     }
 
     private CompanyResponse response() {
         SubscriptionPlanResponse plan = new SubscriptionPlanResponse(1, "Basic", "Entry plan", new BigDecimal("99.90"), 2, 5, true);
-        return new CompanyResponse(
-                1, plan, "Mottainai Comercio LTDA", "Mottainai", "11222333000181", "contato@mottainai.com", "11999999999", null, null, true
-        );
+        return new CompanyResponse(1, plan, "Mottainai Comercio LTDA", "Mottainai", "11222333000181", "contato@mottainai.com", "11999999999", null, null, true);
     }
+
 }

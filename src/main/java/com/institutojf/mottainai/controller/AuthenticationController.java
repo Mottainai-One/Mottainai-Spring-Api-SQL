@@ -1,26 +1,44 @@
 package com.institutojf.mottainai.controller;
 
 import com.institutojf.mottainai.controller.swagger.AuthenticationControllerApi;
+import com.institutojf.mottainai.dto.request.ChangePasswordRequest;
 import com.institutojf.mottainai.dto.request.ForgotPasswordRequest;
 import com.institutojf.mottainai.dto.request.LoginRequest;
+import com.institutojf.mottainai.dto.request.RefreshTokenRequest;
 import com.institutojf.mottainai.dto.request.ResetPasswordRequest;
 import com.institutojf.mottainai.dto.response.TokenResponse;
+import com.institutojf.mottainai.dto.response.TokenValidationResponse;
+import com.institutojf.mottainai.dto.response.UserResponse;
 import com.institutojf.mottainai.service.AuthenticationService;
+import com.institutojf.mottainai.service.UserProfileService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@RequiredArgsConstructor
 public class AuthenticationController implements AuthenticationControllerApi {
 
     private final AuthenticationService authenticationService;
 
-    public AuthenticationController(AuthenticationService authenticationService) {
-        this.authenticationService = authenticationService;
+    private final UserProfileService userProfileService;
+
+    @Override
+    @GetMapping("/profile")
+    public ResponseEntity<UserResponse> profile(Authentication authentication) {
+        return ResponseEntity.ok(userProfileService.me(authentication.getName()));
     }
 
     @Override
@@ -29,19 +47,48 @@ public class AuthenticationController implements AuthenticationControllerApi {
         return ResponseEntity.ok(authenticationService.login(request));
     }
 
-    // Solicita o envio do código de recuperação para o email informado
+    // Solicita o envio do link de recuperação para o email e CPF informados
     @Override
-    @PostMapping("/forgot-password")
-    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+    @PutMapping("/password-recovery")
+    public ResponseEntity<Void> passwordRecovery(@Valid @RequestBody ForgotPasswordRequest request) {
         authenticationService.requestPasswordReset(request);
         return ResponseEntity.noContent().build();
     }
 
-    // Recebe o código e a nova senha para finalizar a recuperação
     @Override
-    @PostMapping("/reset-password")
-    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    @GetMapping("/password-reset/validate")
+    public ResponseEntity<TokenValidationResponse> validateResetToken(@RequestParam String token) {
+        return ResponseEntity.ok(new TokenValidationResponse(authenticationService.validateResetToken(token)));
+    }
+
+    // Recebe o token do link e a nova senha para finalizar a recuperação
+    @Override
+    @PostMapping("/password-reset")
+    public ResponseEntity<Void> passwordReset(@Valid @RequestBody ResetPasswordRequest request) {
         authenticationService.resetPassword(request);
         return ResponseEntity.noContent().build();
     }
+
+    @Override
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authenticationService.refresh(request.refreshToken()));
+    }
+
+    @Override
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request, Authentication authentication) {
+        JwtAuthenticationToken token = (JwtAuthenticationToken) authentication;
+        UUID sessionId = UUID.fromString(token.getToken().getClaimAsString("sid"));
+        authenticationService.logout(request.refreshToken(), authentication.getName(), sessionId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PutMapping("/password")
+    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request, Authentication authentication) {
+        authenticationService.changePassword(request, authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
+
 }

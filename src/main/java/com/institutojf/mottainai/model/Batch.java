@@ -68,6 +68,6 @@ public class Batch {
     private LocalDateTime deletedAt;
 
     @Version
-    @Column(nullable = false)
+    @Column(name = "version")
     private Integer version = 1;
 }
