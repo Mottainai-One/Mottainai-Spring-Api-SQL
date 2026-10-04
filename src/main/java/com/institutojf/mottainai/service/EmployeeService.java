@@ -144,6 +144,8 @@ public class EmployeeService {
         AppUser user = target(employeeId, requestingUser, true);
         Employee employee = user.getEmployee();
         boolean emailChanged = !user.getEmail().equalsIgnoreCase(request.email());
+        boolean roleChanged = request.roleId() != null && !request.roleId().equals(employee.getRole().getId());
+
         if (emailChanged && appUserRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull(request.email())) {
             throw new ConflictException("Email already exists");
         }
@@ -164,10 +166,12 @@ public class EmployeeService {
         appUserRepository.save(user);
         auditLogRepository.record("employee", "UPDATE", employeeId.toString(), requestingUser.getId(), oldData,
                 employeeAuditData(employee));
+        if (emailChanged || roleChanged) {
+            sessionRepository.revokeAllForUser(user.getId());
+        }
         if (emailChanged) {
             passwordResetTokenRepository.invalidateUnusedForUser(user.getId(), OffsetDateTime.now(ZoneOffset.UTC));
             invitationRepository.invalidateUnusedForUser(user.getId());
-            sessionRepository.revokeAllForUser(user.getId());
             if (!Boolean.TRUE.equals(user.getPasswordSet())) {
                 String rawToken = tokenHashService.newToken();
                 invitationRepository.create(user.getId(), tokenHashService.hash(rawToken),
