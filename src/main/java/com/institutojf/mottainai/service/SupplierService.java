@@ -80,10 +80,11 @@ public class SupplierService {
     }
 
     @Transactional
-    public void deactivate(Integer id) {
+    public void delete(Integer id) {
         Supplier supplier = findActiveSupplierById(id);
         ensureCanDeactivate(id);
         supplier.setActive(false);
+        supplier.setDeletedAt(LocalDateTime.now());
         supplierRepository.save(supplier);
     }
 

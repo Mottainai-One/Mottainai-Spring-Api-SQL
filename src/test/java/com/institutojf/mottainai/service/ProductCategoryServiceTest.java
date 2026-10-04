@@ -20,7 +20,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -66,13 +66,13 @@ class ProductCategoryServiceTest {
     }
 
     @Test
-    @DisplayName("Should deactivate category without soft deleting it")
-    void shouldDeactivateCategoryWithoutSoftDeletingIt() {
+    @DisplayName("Should deactivate category and mark it logically deleted")
+    void shouldDeactivateCategoryAndMarkItLogicallyDeleted() {
         ProductCategory category = category(1, true);
         when(categoryRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(category));
-        productCategoryService.deactivate(1);
+        productCategoryService.delete(1);
         assertFalse(category.getActive());
-        assertNull(category.getDeletedAt());
+        assertNotNull(category.getDeletedAt());
         verify(categoryRepository).save(category);
     }
 
@@ -82,7 +82,7 @@ class ProductCategoryServiceTest {
         ProductCategory category = category(1, true);
         when(categoryRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(category));
         when(productRepository.existsByCategory_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(true);
-        assertThrows(BusinessException.class, () -> productCategoryService.deactivate(1));
+        assertThrows(BusinessException.class, () -> productCategoryService.delete(1));
         verify(categoryRepository, never()).save(any());
     }
 
@@ -90,7 +90,7 @@ class ProductCategoryServiceTest {
     @DisplayName("Should return not found when deactivating a nonexistent category")
     void shouldReturnNotFoundWhenDeactivatingANonexistentCategory() {
         when(categoryRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.empty());
-        assertThrows(ResourceNotFoundException.class, () -> productCategoryService.deactivate(1));
+        assertThrows(ResourceNotFoundException.class, () -> productCategoryService.delete(1));
         verify(categoryRepository, never()).save(any());
     }
 

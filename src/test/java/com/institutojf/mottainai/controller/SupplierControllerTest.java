@@ -79,7 +79,7 @@ class SupplierControllerTest {
     @DisplayName("Should deactivate supplier with no content response")
     void shouldDeactivateSupplierWithNoContentResponse() throws Exception {
         mockMvc.perform(delete("/api/v1/suppliers/1")).andExpect(status().isNoContent());
-        verify(supplierService).deactivate(1);
+        verify(supplierService).delete(1);
     }
 
     private CreateSupplierRequest request() {
