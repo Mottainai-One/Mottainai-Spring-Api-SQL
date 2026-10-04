@@ -145,7 +145,7 @@ class CompanyServiceTest {
         when(employeeRepository.findAllByStore_Company_IdAndDeletedAtIsNull(1)).thenReturn(java.util.List.of(employee));
         when(appUserRepository.findAllByEmployee_Store_Company_IdAndDeletedAtIsNull(1)).thenReturn(java.util.List.of(user));
 
-        companyService.deactivate(1, "admin@example.com");
+        companyService.delete(1, "admin@example.com");
 
         assertFalse(company.getActive());
         assertNotNull(company.getDeletedAt());

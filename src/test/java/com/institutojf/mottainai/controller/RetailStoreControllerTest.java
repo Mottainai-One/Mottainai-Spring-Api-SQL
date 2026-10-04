@@ -94,7 +94,7 @@ class RetailStoreControllerTest {
         mockMvc.perform(delete("/api/v1/stores/1")
             .principal(new UsernamePasswordAuthenticationToken("admin@mottainai.com", null)))
             .andExpect(status().isNoContent());
-        verify(retailStoreService).deactivate(eq(1), any());
+        verify(retailStoreService).delete(eq(1), any());
     }
 
     @Test

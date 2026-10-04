@@ -72,8 +72,8 @@ public class RetailStoreController implements RetailStoreControllerApi {
     @Override
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id, Authentication authentication) {
-        retailStoreService.deactivate(id, authentication.getName());
+    public ResponseEntity<Void> delete(@PathVariable Integer id, Authentication authentication) {
+        retailStoreService.delete(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 

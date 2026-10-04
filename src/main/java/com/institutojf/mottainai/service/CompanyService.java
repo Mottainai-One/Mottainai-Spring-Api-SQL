@@ -83,7 +83,7 @@ public class CompanyService {
     }
 
     @Transactional
-    public void deactivate(Integer id, String actorEmail) {
+    public void delete(Integer id, String actorEmail) {
         AppUser actor = appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(actorEmail)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Company company = findActiveCompanyById(id);

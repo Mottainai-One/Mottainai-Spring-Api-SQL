@@ -89,7 +89,7 @@ class CompanyControllerTest {
         mockMvc.perform(delete("/api/v1/companies/1")
             .principal(new UsernamePasswordAuthenticationToken("admin@mottainai.com", null)))
             .andExpect(status().isNoContent());
-        verify(companyService).deactivate(eq(1), any());
+        verify(companyService).delete(eq(1), any());
     }
 
     private CreateCompanyRequest request() {

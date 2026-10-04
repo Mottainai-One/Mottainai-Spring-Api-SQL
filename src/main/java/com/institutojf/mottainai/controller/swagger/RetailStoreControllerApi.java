@@ -56,12 +56,12 @@ public interface RetailStoreControllerApi {
     })
     ResponseEntity<RetailStoreResponse> updateStatus(Integer id, UpdateActiveStatusRequest request);
 
-    @Operation(summary = "Deactivate a retail store")
+    @Operation(summary = "Logically delete a retail store")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Retail store deactivated"),
-            @ApiResponse(responseCode = "400", description = "Retail store cannot be deactivated", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "204", description = "Retail store logically deleted"),
+            @ApiResponse(responseCode = "400", description = "Retail store cannot be logically deleted", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Retail store not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<Void> deactivate(Integer id, Authentication authentication);
+    ResponseEntity<Void> delete(Integer id, Authentication authentication);
 
 }

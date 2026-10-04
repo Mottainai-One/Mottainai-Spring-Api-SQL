@@ -132,7 +132,7 @@ class RetailStoreServiceTest {
         actor.setId(9);
         when(retailStoreRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(store));
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull("admin@example.com")).thenReturn(Optional.of(actor));
-        retailStoreService.deactivate(1, "admin@example.com");
+        retailStoreService.delete(1, "admin@example.com");
         assertFalse(store.getActive());
         assertNotNull(store.getDeletedAt());
         verify(retailStoreRepository).save(store);
