@@ -73,7 +73,7 @@ class ProductCategoryControllerTest {
     @DisplayName("Should deactivate category with no content response")
     void shouldDeactivateCategoryWithNoContentResponse() throws Exception {
         mockMvc.perform(delete("/api/v1/product-categories/1")).andExpect(status().isNoContent());
-        verify(categoryService).deactivate(1);
+        verify(categoryService).delete(1);
     }
 
 }

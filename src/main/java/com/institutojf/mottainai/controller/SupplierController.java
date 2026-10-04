@@ -69,8 +69,8 @@ public class SupplierController implements SupplierControllerApi {
 
     @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
-        supplierService.deactivate(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        supplierService.delete(id);
         return ResponseEntity.noContent().build();
     }
 

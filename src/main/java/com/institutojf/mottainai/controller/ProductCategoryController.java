@@ -56,8 +56,8 @@ public class ProductCategoryController implements ProductCategoryControllerApi {
 
     @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
-        categoryService.deactivate(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        categoryService.delete(id);
         return ResponseEntity.noContent().build();
     }
 

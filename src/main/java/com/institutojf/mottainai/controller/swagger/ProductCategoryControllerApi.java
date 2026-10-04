@@ -47,12 +47,12 @@ public interface ProductCategoryControllerApi {
     })
     ResponseEntity<ProductCategoryResponse> update(Integer id, UpdateProductCategoryRequest request);
 
-    @Operation(summary = "Deactivate a product category")
+    @Operation(summary = "Logically delete a product category")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Product category deactivated"),
-            @ApiResponse(responseCode = "400", description = "Product category cannot be deactivated", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "204", description = "Product category logically deleted"),
+            @ApiResponse(responseCode = "400", description = "Product category cannot be logically deleted", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Product category not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<Void> deactivate(Integer id);
+    ResponseEntity<Void> delete(Integer id);
 
 }

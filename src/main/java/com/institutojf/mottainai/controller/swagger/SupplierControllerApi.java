@@ -56,13 +56,13 @@ public interface SupplierControllerApi {
     })
     ResponseEntity<SupplierResponse> update(Integer id, UpdateSupplierRequest request);
 
-    @Operation(summary = "Deactivate a supplier")
+    @Operation(summary = "Logically delete a supplier")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Supplier deactivated"),
-            @ApiResponse(responseCode = "400", description = "Supplier cannot be deactivated", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "204", description = "Supplier logically deleted"),
+            @ApiResponse(responseCode = "400", description = "Supplier cannot be logically deleted", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Supplier not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<Void> deactivate(Integer id);
+    ResponseEntity<Void> delete(Integer id);
 
     @Operation(summary = "List purchase history for a supplier")
     @ApiResponses({

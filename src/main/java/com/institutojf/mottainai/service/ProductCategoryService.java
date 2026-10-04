@@ -16,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class ProductCategoryService {
@@ -68,10 +70,11 @@ public class ProductCategoryService {
     }
 
     @Transactional
-    public void deactivate(Integer id) {
+    public void delete(Integer id) {
         ProductCategory category = findActiveCategoryById(id);
         ensureCanDeactivate(id);
         category.setActive(false);
+        category.setDeletedAt(LocalDateTime.now());
         categoryRepository.save(category);
     }
 

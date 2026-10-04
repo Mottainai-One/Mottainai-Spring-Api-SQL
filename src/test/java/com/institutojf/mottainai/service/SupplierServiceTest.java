@@ -23,7 +23,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -73,15 +73,15 @@ class SupplierServiceTest {
     }
 
     @Test
-    @DisplayName("Should deactivate supplier without soft deleting it")
-    void shouldDeactivateSupplierWithoutSoftDeletingIt() {
+    @DisplayName("Should deactivate supplier and mark it logically deleted")
+    void shouldDeactivateSupplierAndMarkItLogicallyDeleted() {
         Supplier supplier = supplier(1, true);
         when(supplierRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(supplier));
 
-        supplierService.deactivate(1);
+        supplierService.delete(1);
 
         assertFalse(supplier.getActive());
-        assertNull(supplier.getDeletedAt());
+        assertNotNull(supplier.getDeletedAt());
         verify(supplierRepository).save(supplier);
     }
 
@@ -92,7 +92,7 @@ class SupplierServiceTest {
         when(supplierRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(supplier));
         when(supplierProductRepository.existsBySupplier_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(true);
 
-        assertThrows(BusinessException.class, () -> supplierService.deactivate(1));
+        assertThrows(BusinessException.class, () -> supplierService.delete(1));
 
         verify(supplierRepository, never()).save(any());
     }
@@ -102,7 +102,7 @@ class SupplierServiceTest {
     void shouldReturnNotFoundWhenDeactivatingANonexistentSupplier() {
         when(supplierRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> supplierService.deactivate(1));
+        assertThrows(ResourceNotFoundException.class, () -> supplierService.delete(1));
 
         verify(supplierRepository, never()).save(any());
     }
