@@ -49,12 +49,12 @@ public interface CompanyControllerApi {
     })
     ResponseEntity<CompanyResponse> update(Integer id, UpdateCompanyRequest request);
 
-    @Operation(summary = "Deactivate a company")
+    @Operation(summary = "Logically delete a company")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Company deactivated"),
-            @ApiResponse(responseCode = "400", description = "Company cannot be deactivated", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "204", description = "Company logically deleted"),
+            @ApiResponse(responseCode = "400", description = "Company cannot be logically deleted", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Company not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<Void> deactivate(Integer id, Authentication authentication);
+    ResponseEntity<Void> delete(Integer id, Authentication authentication);
 
 }

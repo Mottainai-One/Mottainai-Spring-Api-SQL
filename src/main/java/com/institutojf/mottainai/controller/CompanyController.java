@@ -59,8 +59,8 @@ public class CompanyController implements CompanyControllerApi {
 
     @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id, Authentication authentication) {
-        companyService.deactivate(id, authentication.getName());
+    public ResponseEntity<Void> delete(@PathVariable Integer id, Authentication authentication) {
+        companyService.delete(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 
