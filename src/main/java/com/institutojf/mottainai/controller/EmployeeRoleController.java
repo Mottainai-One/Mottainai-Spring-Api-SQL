@@ -29,12 +29,14 @@ public class EmployeeRoleController implements EmployeeRoleControllerApi {
 
     @Override
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'MANAGER')")
     public ResponseEntity<List<EmployeeRoleResponse>> findAll() {
         return ResponseEntity.ok(employeeRoleService.findAll());
     }
 
     @Override
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'MANAGER')")
     public ResponseEntity<EmployeeRoleResponse> findById(@PathVariable Integer id) {
         return ResponseEntity.ok(employeeRoleService.findById(id));
     }
