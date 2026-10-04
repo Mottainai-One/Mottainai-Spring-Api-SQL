@@ -75,7 +75,7 @@ class SubscriptionPlanControllerTest {
     @DisplayName("Should deactivate subscription plan with no content response")
     void shouldDeactivateSubscriptionPlanWithNoContentResponse() throws Exception {
         mockMvc.perform(delete("/api/v1/subscription-plans/1")).andExpect(status().isNoContent());
-        verify(subscriptionPlanService).deactivate(1);
+        verify(subscriptionPlanService).delete(1);
     }
 
     private CreateSubscriptionPlanRequest request() {

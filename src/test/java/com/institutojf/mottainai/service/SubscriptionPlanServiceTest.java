@@ -21,7 +21,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -89,14 +89,14 @@ class SubscriptionPlanServiceTest {
     }
 
     @Test
-    @DisplayName("Should deactivate plan without soft deleting it")
-    void shouldDeactivatePlanWithoutSoftDeletingIt() {
+    @DisplayName("Should deactivate plan and mark it logically deleted")
+    void shouldDeactivatePlanAndMarkItLogicallyDeleted() {
         SubscriptionPlan plan = plan(1, true);
         when(subscriptionPlanRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(plan));
         when(companyRepository.existsByPlan_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(false);
-        subscriptionPlanService.deactivate(1);
+        subscriptionPlanService.delete(1);
         assertFalse(plan.getActive());
-        assertNull(plan.getDeletedAt());
+        assertNotNull(plan.getDeletedAt());
         verify(subscriptionPlanRepository).save(plan);
     }
 
@@ -106,7 +106,7 @@ class SubscriptionPlanServiceTest {
         when(subscriptionPlanRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1))
             .thenReturn(Optional.of(plan(1, true)));
         when(companyRepository.existsByPlan_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(true);
-        assertThrows(BusinessException.class, () -> subscriptionPlanService.deactivate(1));
+        assertThrows(BusinessException.class, () -> subscriptionPlanService.delete(1));
         verify(subscriptionPlanRepository, never()).save(any());
     }
 
@@ -114,7 +114,7 @@ class SubscriptionPlanServiceTest {
     @DisplayName("Should return not found when deactivating a nonexistent plan")
     void shouldReturnNotFoundWhenDeactivatingANonexistentPlan() {
         when(subscriptionPlanRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.empty());
-        assertThrows(ResourceNotFoundException.class, () -> subscriptionPlanService.deactivate(1));
+        assertThrows(ResourceNotFoundException.class, () -> subscriptionPlanService.delete(1));
         verify(subscriptionPlanRepository, never()).save(any());
     }
 

@@ -58,8 +58,8 @@ public class SubscriptionPlanController implements SubscriptionPlanControllerApi
 
     @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
-        subscriptionPlanService.deactivate(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        subscriptionPlanService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
