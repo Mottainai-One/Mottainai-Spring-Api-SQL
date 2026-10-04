@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -67,10 +68,11 @@ public class SubscriptionPlanService {
     }
 
     @Transactional
-    public void deactivate(Integer id) {
+    public void delete(Integer id) {
         SubscriptionPlan plan = findActivePlanById(id);
         ensureCanDeactivate(id);
         plan.setActive(false);
+        plan.setDeletedAt(LocalDateTime.now());
         subscriptionPlanRepository.save(plan);
     }
 
