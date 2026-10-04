@@ -123,7 +123,7 @@ class ProductControllerTest {
         mockMvc.perform(delete("/api/v1/products/1")
             .principal(new UsernamePasswordAuthenticationToken("admin@mottainai.com", null)))
             .andExpect(status().isNoContent());
-        verify(productService).deactivate(eq(1), any());
+        verify(productService).delete(eq(1), any());
     }
 
     @Test

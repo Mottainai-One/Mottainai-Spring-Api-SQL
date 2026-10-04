@@ -58,8 +58,8 @@ public class TaxProfileController implements TaxProfileControllerApi {
     @Override
     @DeleteMapping("/tax-profiles/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id, Authentication authentication) {
-        taxProfileService.deactivate(id, authentication.getName());
+    public ResponseEntity<Void> delete(@PathVariable Integer id, Authentication authentication) {
+        taxProfileService.delete(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 

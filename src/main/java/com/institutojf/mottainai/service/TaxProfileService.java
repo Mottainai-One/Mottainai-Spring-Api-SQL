@@ -79,7 +79,7 @@ public class TaxProfileService {
     }
 
     @Transactional
-    public void deactivate(Integer id, String actorEmail) {
+    public void delete(Integer id, String actorEmail) {
         TaxProfile profile = findActiveProfile(id);
         if (productRepository.existsByTaxProfile_IdAndActiveTrueAndDeletedAtIsNull(id)) {
             throw new BusinessException("Tax profile is used by active products");
