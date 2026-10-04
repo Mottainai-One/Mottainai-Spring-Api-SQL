@@ -58,14 +58,14 @@ public interface EmployeeControllerApi {
     })
     ResponseEntity<EmployeeResponse> find(Integer id, Authentication authentication);
 
-    @Operation(summary = "Update employee registration data")
+    @Operation(summary = "Update employee registration data without changing CPF")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Employee updated", content = @Content(schema = @Schema(implementation = EmployeeResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "401", description = "Authentication required"),
             @ApiResponse(responseCode = "403", description = "Administrator role required"),
             @ApiResponse(responseCode = "404", description = "Employee or role not found in the allowed scope", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "409", description = "CPF or email conflict, or database constraint violation", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "409", description = "Email conflict, or database constraint violation", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "503", description = "Employee data saved but new invitation delivery failed", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     ResponseEntity<EmployeeResponse> update(Integer id, UpdateEmployeeRequest request, Authentication authentication);

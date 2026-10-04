@@ -149,13 +149,9 @@ public class EmployeeService {
         if (emailChanged && appUserRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull(request.email())) {
             throw new ConflictException("Email already exists");
         }
-        if (!employee.getCpf().equals(request.cpf()) && employeeRepository.existsByCpf(request.cpf())) {
-            throw new ConflictException("CPF already exists");
-        }
         Map<String, Object> oldData = employeeAuditData(employee);
         String oldEmail = user.getEmail();
         employee.setName(request.name());
-        employee.setCpf(request.cpf());
         employee.setEmail(request.email());
         employee.setPhone(request.phone());
         if (request.roleId() != null) {
