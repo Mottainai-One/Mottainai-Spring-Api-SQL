@@ -117,7 +117,7 @@ class ProductServiceTest {
         when(productRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(product));
         when(supplierProductRepository.existsByProduct_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(true);
 
-        assertThrows(BusinessException.class, () -> productService.deactivate(1, "admin@example.com"));
+        assertThrows(BusinessException.class, () -> productService.delete(1, "admin@example.com"));
         verify(productRepository, never()).save(any());
     }
 

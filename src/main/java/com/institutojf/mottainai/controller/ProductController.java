@@ -96,8 +96,8 @@ public class ProductController implements ProductControllerApi {
 
     @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id, Authentication authentication) {
-        productService.deactivate(id, authentication.getName());
+    public ResponseEntity<Void> delete(@PathVariable Integer id, Authentication authentication) {
+        productService.delete(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 

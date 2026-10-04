@@ -105,7 +105,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void deactivate(Integer id, String actorEmail) {
+    public void delete(Integer id, String actorEmail) {
         Product product = findActiveProductById(id);
         ensureCanDeactivate(id);
         AppUser actor = appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(actorEmail)

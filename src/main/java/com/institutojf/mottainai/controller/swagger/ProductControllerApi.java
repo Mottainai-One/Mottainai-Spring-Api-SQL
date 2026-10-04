@@ -75,13 +75,13 @@ public interface ProductControllerApi {
     })
     ResponseEntity<ProductResponse> updateStatus(Integer id, UpdateActiveStatusRequest request);
 
-    @Operation(summary = "Deactivate a product")
+    @Operation(summary = "Logically delete a product")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Product deactivated"),
-            @ApiResponse(responseCode = "400", description = "Product cannot be deactivated", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "204", description = "Product logically deleted"),
+            @ApiResponse(responseCode = "400", description = "Product cannot be logically deleted", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<Void> deactivate(Integer id, Authentication authentication);
+    ResponseEntity<Void> delete(Integer id, Authentication authentication);
 
     @Operation(summary = "List active store prices for a product")
     @ApiResponses({
