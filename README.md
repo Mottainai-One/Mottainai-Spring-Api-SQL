@@ -68,7 +68,11 @@ As rotas em `/api/v1/client/loyalty/**` exigem um Firebase ID token. O `sub` do 
 Authorization: Bearer <firebase-id-token>
 ```
 
-Esse fluxo permanece Firebase e identifica o cliente pelo UID, sem procurar outro cliente por e-mail caso o UID não exista. As rotas documentadas `/api/v1/customers/auth/**` usam a conta SQL em `customer_auth` e emitem JWT interno; esse JWT não é aceito nas rotas Firebase de `/api/v1/client/**`.
+Esse fluxo permanece Firebase e identifica o cliente pelo UID, sem procurar outro cliente por e-mail caso o UID não exista.
+
+O perfil do app está em `GET /api/v1/client/auth/profile`, com CPF mascarado. A renovação do ID token e o logout no dispositivo são feitos pelo SDK Firebase, sem enviar refresh tokens ao backend. `signOut()` encerra a sessão no dispositivo; não revoga imediatamente um ID token já emitido. Veja a [gestão de sessões Firebase](https://firebase.google.com/docs/auth/admin/manage-sessions).
+
+As rotas documentadas `/api/v1/customers/auth/**` usam a conta SQL em `customer_auth` e emitem JWT interno; esse JWT não é aceito nas rotas Firebase de `/api/v1/client/**`. O perfil SQL está em `GET /api/v1/customers/auth/profile`, exclusivo de `CUSTOMER`. O fluxo SQL continua emitindo somente access token; não deve substituir a sessão Firebase do app.
 
 ## Endpoints
 
