@@ -1,26 +1,35 @@
 package com.institutojf.mottainai.service;
 
 import com.institutojf.mottainai.config.StaffProperties;
-import com.institutojf.mottainai.dto.request.*;
+import com.institutojf.mottainai.dto.request.CustomerLoginRequest;
+import com.institutojf.mottainai.dto.request.CustomerPasswordRecoveryRequest;
+import com.institutojf.mottainai.dto.request.CustomerPasswordResetRequest;
+import com.institutojf.mottainai.dto.response.CustomerResponse;
 import com.institutojf.mottainai.dto.response.CustomerTokenResponse;
 import com.institutojf.mottainai.exception.BusinessException;
+import com.institutojf.mottainai.exception.CustomerRecoveryDeliveryException;
 import com.institutojf.mottainai.model.CustomerAuth;
 import com.institutojf.mottainai.repository.CustomerAuthRepository;
-import com.institutojf.mottainai.security.*;
+import com.institutojf.mottainai.security.CustomerAccess;
+import com.institutojf.mottainai.security.JwtProperties;
+import com.institutojf.mottainai.security.JwtService;
+import com.institutojf.mottainai.security.TokenHashService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.mail.autoconfigure.MailProperties;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.MailException;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.security.authentication.*;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.institutojf.mottainai.exception.CustomerRecoveryDeliveryException;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +42,10 @@ public class CustomerAuthenticationService {
     private static final int RESET_MINUTES = 15;
 
     private final CustomerAuthRepository customerAuthRepository;
+
+    private final CustomerAccess customerAccess;
+
+    private final CustomerService customerService;
 
     private final PasswordEncoder passwordEncoder;
 
@@ -47,6 +60,11 @@ public class CustomerAuthenticationService {
     private final MailProperties mailProperties;
 
     private final StaffProperties staffProperties;
+
+    @Transactional(readOnly = true)
+    public CustomerResponse profile(Authentication authentication) {
+        return customerService.find(customerAccess.currentCustomer(authentication).getId());
+    }
 
     @Transactional(noRollbackFor = BadCredentialsException.class)
     public CustomerTokenResponse login(CustomerLoginRequest request) {
