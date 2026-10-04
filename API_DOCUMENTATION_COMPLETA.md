@@ -1,5 +1,7 @@
 # Mottainai — Documentação Técnica Completa da API
 
+> **Documento histórico; não use como contrato de integração.** Esta cópia ainda contém exemplos desatualizados de autenticação, rotas e `tokenVersion`. Para o contrato esperado, consulte `Endpoints API SQL.md`; para o que está implementado, consulte o OpenAPI publicado pela API. A V10 provisória ainda depende de decisão sobre funções e permissões; não a aplique até consolidar o escopo no repositório do banco.
+
 ## 📋 Índice
 
 1. [Visão Geral](#visão-geral)
@@ -23,7 +25,7 @@ Este documento descreve a API exposta pelos controllers em `src/main/java/com/in
 - **Operações HTTP mapeadas:** 82
 - **Documentação interativa:** `/swagger-ui.html`
 - **OpenAPI:** `/api-docs`
-- **Migrations Flyway:** 9 (`V1` a `V9`)
+- **Migrations:** `V1` a `V9` são a base histórica; `V10` é provisória e não é aplicada automaticamente pela configuração atual.
 
 ---
 
