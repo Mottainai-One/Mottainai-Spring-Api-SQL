@@ -30,6 +30,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 public class Inventory {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "inventory_id")
@@ -60,9 +61,6 @@ public class Inventory {
     @Column(length = 80)
     private String location;
 
-    @Column(nullable = false)
-    private Boolean active = true;
-
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -77,4 +75,5 @@ public class Inventory {
     @Version
     @Column(name = "version")
     private Integer version = 1;
+
 }

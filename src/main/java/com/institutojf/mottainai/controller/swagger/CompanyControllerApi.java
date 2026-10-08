@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 
 @Tag(name = "Companies", description = "API for managing companies")
 public interface CompanyControllerApi {
@@ -54,5 +55,6 @@ public interface CompanyControllerApi {
             @ApiResponse(responseCode = "400", description = "Company cannot be deactivated", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Company not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<Void> deactivate(Integer id);
+    ResponseEntity<Void> deactivate(Integer id, Authentication authentication);
+
 }

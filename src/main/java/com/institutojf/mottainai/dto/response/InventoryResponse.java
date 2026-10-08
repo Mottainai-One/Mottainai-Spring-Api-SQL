@@ -13,6 +13,7 @@ public record InventoryResponse(
         BigDecimal minimumQuantity,
         BigDecimal maximumQuantity,
         String location,
-        Integer version
+        Integer version,
+        boolean reactivated
 ) {
 }

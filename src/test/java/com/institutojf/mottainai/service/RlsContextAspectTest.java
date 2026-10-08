@@ -12,6 +12,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.List;
+
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -21,7 +24,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class RlsContextAspectTest {
+
     private final RlsContextService rlsContextService = mock(RlsContextService.class);
+
     private final RlsContextAspect aspect = new RlsContextAspect(rlsContextService,
             new JwtProperties("unused", "https://mottainai.local", 60, 7));
 
@@ -33,11 +38,9 @@ class RlsContextAspectTest {
     @Test
     @DisplayName("Should leave firebase authentication outside staff context")
     void shouldLeaveFirebaseAuthenticationOutsideStaffContext() throws Throwable {
-        SecurityContextHolder.getContext().setAuthentication(token("customer-uid",
-                "https://securetoken.google.com/customer-project"));
+        SecurityContextHolder.getContext().setAuthentication(token("customer-uid", "https://securetoken.google.com/customer-project"));
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
         when(joinPoint.proceed()).thenReturn("ok");
-
         assertEquals("ok", aspect.setContext(joinPoint));
         verifyNoInteractions(rlsContextService);
     }
@@ -45,10 +48,8 @@ class RlsContextAspectTest {
     @Test
     @DisplayName("Should reject staff request without matching database context")
     void shouldRejectStaffRequestWithoutMatchingDatabaseContext() {
-        SecurityContextHolder.getContext().setAuthentication(token("admin@example.com",
-                "https://mottainai.local"));
+        SecurityContextHolder.getContext().setAuthentication(token("admin@example.com", "https://mottainai.local"));
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-
         assertThrows(BadCredentialsException.class, () -> aspect.setContext(joinPoint));
         verify(rlsContextService).bootstrapByEmail("admin@example.com");
     }
@@ -56,21 +57,31 @@ class RlsContextAspectTest {
     @Test
     @DisplayName("Should set staff RLS context before running a transactional service")
     void shouldBootstrapStaffContextBeforeProceeding() throws Throwable {
-        SecurityContextHolder.getContext().setAuthentication(token("admin@example.com",
-                "https://mottainai.local"));
+        SecurityContextHolder.getContext().setAuthentication(token("admin@example.com", "https://mottainai.local"));
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
         when(rlsContextService.bootstrapByEmail("admin@example.com")).thenReturn(true);
         when(joinPoint.proceed()).thenReturn("ok");
-
         assertEquals("ok", aspect.setContext(joinPoint));
-
         verify(rlsContextService).bootstrapByEmail("admin@example.com");
         verify(joinPoint).proceed();
     }
 
+    @Test
+    void shouldSkipStaffBootstrapForCustomerOnlyToken() throws Throwable {
+        Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(60), Map.of("alg", "HS256"),
+                Map.of("sub", "customer@example.com", "iss", "https://mottainai.local", "use", "access"));
+        SecurityContextHolder.getContext()
+            .setAuthentication(new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER"))));
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        when(joinPoint.proceed()).thenReturn("ok");
+        assertEquals("ok", aspect.setContext(joinPoint));
+        verifyNoInteractions(rlsContextService);
+    }
+
     private JwtAuthenticationToken token(String subject, String issuer) {
-        Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(60),
-                Map.of("alg", "HS256"), Map.of("sub", subject, "iss", issuer));
+        Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(60), Map.of("alg", "HS256"),
+                Map.of("sub", subject, "iss", issuer));
         return new JwtAuthenticationToken(jwt);
     }
+
 }

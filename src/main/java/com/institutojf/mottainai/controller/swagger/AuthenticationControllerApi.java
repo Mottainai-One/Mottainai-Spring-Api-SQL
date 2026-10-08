@@ -80,4 +80,5 @@ public interface AuthenticationControllerApi {
             @ApiResponse(responseCode = "401", description = "Authentication required")
     })
     ResponseEntity<Void> changePassword(ChangePasswordRequest request, Authentication authentication);
+
 }
