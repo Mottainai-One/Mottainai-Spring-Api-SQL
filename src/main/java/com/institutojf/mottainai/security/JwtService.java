@@ -1,5 +1,6 @@
 package com.institutojf.mottainai.security;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -11,21 +12,28 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class JwtService {
 
     private final JwtEncoder jwtEncoder;
     private final JwtProperties jwtProperties;
 
-    public JwtService(JwtEncoder jwtEncoder, JwtProperties jwtProperties) {
-        this.jwtEncoder = jwtEncoder;
-        this.jwtProperties = jwtProperties;
-    }
-
-    public String generateToken(Authentication authentication, Integer tokenVersion) {
+    public String generateAccessToken(Authentication authentication, Integer tokenVersion, UUID sessionId) {
         Instant issuedAt = Instant.now();
         Instant expiresAt = issuedAt.plus(jwtProperties.expirationMinutes(), ChronoUnit.MINUTES);
+        return generateToken(authentication, tokenVersion, sessionId, issuedAt, expiresAt, "access");
+    }
+
+    public String generateRefreshToken(Authentication authentication, Integer tokenVersion, UUID sessionId, long expirationDays) {
+        Instant issuedAt = Instant.now();
+        Instant expiresAt = issuedAt.plus(expirationDays, ChronoUnit.DAYS);
+        return generateToken(authentication, tokenVersion, sessionId, issuedAt, expiresAt, "refresh");
+    }
+
+    private String generateToken(Authentication authentication, Integer tokenVersion, UUID sessionId, Instant issuedAt, Instant expiresAt, String use) {
         List<String> roles = authentication.getAuthorities().stream()
                 .map(authority -> authority.getAuthority().replaceFirst("^ROLE_", ""))
                 .toList();
@@ -38,6 +46,9 @@ public class JwtService {
                 .claim("roles", roles)
                 // Permite invalidar tokens antigos quando a senha muda
                 .claim("tokenVersion", tokenVersion)
+                .claim("sid", sessionId.toString())
+                .claim("use", use)
+                .id(UUID.randomUUID().toString())
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).type("JWT").build();
 
