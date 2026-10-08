@@ -48,6 +48,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 
 @Configuration
 @EnableWebSecurity
@@ -209,13 +210,20 @@ public class SecurityConfig {
             return false;
         }
         if (user.getEmployee() == null) {
-            return true;
+            return false;
         }
         return Boolean.TRUE.equals(user.getEmployee().getActive())
                 && user.getEmployee().getDeletedAt() == null
                 && user.getEmployee().getRole() != null
                 && Boolean.TRUE.equals(user.getEmployee().getRole().getActive())
-                && user.getEmployee().getRole().getDeletedAt() == null;
+                && user.getEmployee().getRole().getDeletedAt() == null
+                && tokenContainsCurrentRole(user, jwt);
+    }
+
+    private boolean tokenContainsCurrentRole(AppUser user, Jwt jwt) {
+        List<String> tokenRoles = jwt.getClaimAsStringList("roles");
+        String currentRole = user.getEmployee().getRole().getName().toUpperCase(Locale.ROOT);
+        return tokenRoles != null && tokenRoles.size() == 1 && tokenRoles.contains(currentRole);
     }
 
     private SecretKey jwtSecretKey() {

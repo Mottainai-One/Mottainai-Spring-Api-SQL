@@ -11,6 +11,7 @@ import com.institutojf.mottainai.repository.AppUserRepository;
 import com.institutojf.mottainai.repository.EmployeeRepository;
 import com.institutojf.mottainai.repository.EmployeeRoleRepository;
 import com.institutojf.mottainai.mapper.RetailStoreMapper;
+import com.institutojf.mottainai.repository.AuditLogRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,6 +34,8 @@ class UserProfileServiceTest {
 
     @Mock EmployeeRoleRepository employeeRoleRepository;
 
+    @Mock AuditLogRepository auditLogRepository;
+
     @Mock RetailStoreMapper retailStoreMapper;
 
     @Mock PasswordEncoder passwordEncoder;
@@ -47,6 +50,7 @@ class UserProfileServiceTest {
         var response = service.me("admin@test.com");
 
         assertEquals("admin@test.com", response.email());
+        assertEquals("***.***.***-01", response.cpf());
         assertNull(response.firebaseUid());
         assertEquals("ADMINISTRATOR", response.role());
     }
@@ -60,8 +64,16 @@ class UserProfileServiceTest {
         when(employeeRepository.existsByCpf("12345678901")).thenReturn(false);
         when(employeeRoleRepository.findByNameIgnoreCaseAndActiveTrueAndDeletedAtIsNull("OPERATOR")).thenReturn(Optional.of(role));
         when(passwordEncoder.encode(anyString())).thenReturn("$2a$hash");
-        when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(appUserRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> {
+            Employee employee = invocation.getArgument(0);
+            employee.setId(10);
+            return employee;
+        });
+        when(appUserRepository.save(any(AppUser.class))).thenAnswer(invocation -> {
+            AppUser user = invocation.getArgument(0);
+            user.setId(20);
+            return user;
+        });
 
         var response = service.invite(new InviteStoreUserRequest("New User", "12345678901", "new@test.com", null, "OPERATOR"), "admin@test.com");
 
@@ -70,6 +82,8 @@ class UserProfileServiceTest {
         assertFalse(response.emailNotificationSent());
         verify(passwordEncoder).encode(anyString());
         verify(appUserRepository).save(argThat(user -> !user.getActive() && user.getEmployee().getStore() == requester.getEmployee().getStore()));
+        verify(auditLogRepository).record(eq("employee"), eq("INSERT"), eq("10"), eq(1), isNull(), any());
+        verify(auditLogRepository).record(eq("app_user"), eq("INSERT"), eq("20"), eq(1), isNull(), any());
     }
 
     @Test
@@ -86,22 +100,27 @@ class UserProfileServiceTest {
     @Test
     void shouldUpdateRoleAndStatusTogether() {
         AppUser user = user(2, "OPERATOR", false);
+        AppUser requester = user(1, "ADMINISTRATOR", true);
         EmployeeRole role = role("SUPERVISOR");
+        when(appUserRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("admin@test.com")).thenReturn(Optional.of(requester));
         when(appUserRepository.findById(2)).thenReturn(Optional.of(user));
         when(employeeRoleRepository.findByNameIgnoreCaseAndActiveTrueAndDeletedAtIsNull("SUPERVISOR")).thenReturn(Optional.of(role));
         when(appUserRepository.save(user)).thenReturn(user);
 
-        var response = service.update(2, new UpdateStoreUserRequest("SUPERVISOR", true));
+        var response = service.update(2, new UpdateStoreUserRequest("SUPERVISOR", true), "admin@test.com");
 
         assertEquals("SUPERVISOR", response.role());
         assertTrue(response.active());
         assertTrue(user.getEmployee().getActive());
+        verify(auditLogRepository).record(eq("employee"), eq("UPDATE"), eq("102"), eq(1), any(), any());
+        verify(auditLogRepository).record(eq("app_user"), eq("UPDATE"), eq("2"), eq(1), any(), any());
     }
 
     private AppUser user(int id, String roleName, boolean active) {
         RetailStore store = new RetailStore();
         store.setId(7);
         Employee employee = new Employee();
+        employee.setId(id + 100);
         employee.setStore(store);
         employee.setName("User");
         employee.setCpf("12345678901");
@@ -117,6 +136,7 @@ class UserProfileServiceTest {
 
     private EmployeeRole role(String name) {
         EmployeeRole role = new EmployeeRole();
+        role.setId(3);
         role.setName(name);
         role.setActive(true);
         return role;

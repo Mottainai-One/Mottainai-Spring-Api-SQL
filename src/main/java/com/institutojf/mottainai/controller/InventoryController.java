@@ -11,6 +11,7 @@ import com.institutojf.mottainai.service.InventoryMovementService;
 import com.institutojf.mottainai.service.InventoryService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -83,8 +85,13 @@ public class InventoryController implements InventoryControllerApi {
 
     @Override
     @GetMapping("/{id}/movements")
-    public ResponseEntity<List<InventoryMovementResponse>> findMovements(@PathVariable Integer id, Authentication authentication) {
-        return ResponseEntity.ok(inventoryMovementService.findByInventory(id, authentication));
+    public ResponseEntity<List<InventoryMovementResponse>> findMovements(
+            @PathVariable Integer id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(inventoryMovementService.findByInventory(id, from, to, authentication));
     }
 
     @Override

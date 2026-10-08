@@ -61,7 +61,7 @@ class InventoryServiceTest {
     void shouldRejectUpdateWhenMaximumIsBelowMinimum() {
         assertThrows(BusinessException.class, () -> service.update(
                 1,
-                new UpdateInventoryRequest(new BigDecimal("3.000"), new BigDecimal("2.000"), null),
+                new UpdateInventoryRequest(new BigDecimal("3.000"), new BigDecimal("2.000"), null, 1),
                 authentication
         ));
     }

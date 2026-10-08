@@ -12,6 +12,7 @@ import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.model.Employee;
 import com.institutojf.mottainai.model.EmployeeRole;
 import com.institutojf.mottainai.repository.AppUserRepository;
+import com.institutojf.mottainai.repository.AuditLogRepository;
 import com.institutojf.mottainai.repository.EmployeeRepository;
 import com.institutojf.mottainai.repository.EmployeeRoleRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,20 +21,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class UserProfileService {
     private final AppUserRepository appUserRepository;
     private final EmployeeRepository employeeRepository;
     private final EmployeeRoleRepository employeeRoleRepository;
+    private final AuditLogRepository auditLogRepository;
     private final RetailStoreMapper retailStoreMapper;
     private final PasswordEncoder passwordEncoder;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public UserProfileService(AppUserRepository appUserRepository, EmployeeRepository employeeRepository, EmployeeRoleRepository employeeRoleRepository, RetailStoreMapper retailStoreMapper, PasswordEncoder passwordEncoder) {
+    public UserProfileService(AppUserRepository appUserRepository, EmployeeRepository employeeRepository, EmployeeRoleRepository employeeRoleRepository, AuditLogRepository auditLogRepository, RetailStoreMapper retailStoreMapper, PasswordEncoder passwordEncoder) {
         this.appUserRepository = appUserRepository;
         this.employeeRepository = employeeRepository;
         this.employeeRoleRepository = employeeRoleRepository;
+        this.auditLogRepository = auditLogRepository;
         this.retailStoreMapper = retailStoreMapper;
         this.passwordEncoder = passwordEncoder;
     }
@@ -87,23 +91,36 @@ public class UserProfileService {
         user.setActive(false);
         user = appUserRepository.save(user);
 
+        auditLogRepository.record("employee", "INSERT", employee.getId().toString(), requester.getId(), null,
+                Map.of("name", employee.getName(), "cpf", employee.getCpf(), "email", employee.getEmail(),
+                        "role_id", employee.getRole().getId(), "store_id", employee.getStore().getId(), "active", false));
+        auditLogRepository.record("app_user", "INSERT", user.getId().toString(), requester.getId(), null,
+                Map.of("employee_id", employee.getId(), "email", user.getEmail(), "cpf", employee.getCpf(), "active", false));
+
         return new InviteStoreUserResponse(toResponse(user), false, true, false);
     }
 
     @Transactional
-    public UserResponse update(Integer id, UpdateStoreUserRequest request) {
+    public UserResponse update(Integer id, UpdateStoreUserRequest request, String requesterEmail) {
+        AppUser requester = findUser(requesterEmail);
         AppUser user = findByIdEntity(id);
         if (request.role() == null && request.active() == null) {
             throw new IllegalArgumentException("At least one field must be provided");
         }
+        Employee employee = user.getEmployee();
+        Map<String, Object> oldEmployeeData = Map.of("role_id", employee.getRole().getId(), "active", employee.getActive());
+        boolean oldUserActive = user.getActive();
         if (request.role() != null) {
-            user.getEmployee().setRole(findRole(request.role()));
+            employee.setRole(findRole(request.role()));
         }
         if (request.active() != null) {
             user.setActive(request.active());
-            user.getEmployee().setActive(request.active());
+            employee.setActive(request.active());
         }
-        return toResponse(appUserRepository.save(user));
+        user = appUserRepository.save(user);
+        auditLogRepository.record("employee", "UPDATE", employee.getId().toString(), requester.getId(), oldEmployeeData, Map.of("role_id", employee.getRole().getId(), "active", employee.getActive()));
+        auditLogRepository.record("app_user", "UPDATE", user.getId().toString(), requester.getId(), Map.of("active", oldUserActive), Map.of("active", user.getActive()));
+        return toResponse(user);
     }
 
     private AppUser findUser(String email) {
@@ -124,9 +141,16 @@ public class UserProfileService {
 
     private UserResponse toResponse(AppUser user) {
         Employee employee = user.getEmployee();
-        return new UserResponse(user.getId(), employee.getName(), employee.getCpf(), user.getEmail(),
+        return new UserResponse(user.getId(), employee.getName(), maskCpf(employee.getCpf()), user.getEmail(),
                 employee.getPhone(), employee.getRole().getName(), user.getActive(), employee.getStore().getId(),
                 user.getFirebaseUid());
+    }
+
+    private String maskCpf(String cpf) {
+        if (cpf == null || cpf.length() != 11) {
+            return "***";
+        }
+        return "***.***.***-" + cpf.substring(9);
     }
 
     private String generateRandomSecret() {
