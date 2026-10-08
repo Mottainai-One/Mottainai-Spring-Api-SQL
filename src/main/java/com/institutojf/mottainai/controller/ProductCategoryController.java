@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.request.UpdateProductCategoryRequest;
 import com.institutojf.mottainai.dto.response.ProductCategoryResponse;
 import com.institutojf.mottainai.service.ProductCategoryService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -22,13 +23,10 @@ import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/product-categories")
+@RequiredArgsConstructor
 public class ProductCategoryController implements ProductCategoryControllerApi {
 
     private final ProductCategoryService categoryService;
-
-    public ProductCategoryController(ProductCategoryService categoryService) {
-        this.categoryService = categoryService;
-    }
 
     @Override
     @PostMapping

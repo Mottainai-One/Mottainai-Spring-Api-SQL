@@ -11,6 +11,7 @@ import com.institutojf.mottainai.repository.AppUserRepository;
 import com.institutojf.mottainai.repository.AuditLogRepository;
 import com.institutojf.mottainai.repository.ProductRepository;
 import com.institutojf.mottainai.repository.TaxProfileRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,18 +21,12 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 @Service
+@RequiredArgsConstructor
 public class TaxProfileService {
     private final TaxProfileRepository taxProfileRepository;
     private final ProductRepository productRepository;
     private final AppUserRepository appUserRepository;
     private final AuditLogRepository auditLogRepository;
-
-    public TaxProfileService(TaxProfileRepository taxProfileRepository, ProductRepository productRepository, AppUserRepository appUserRepository, AuditLogRepository auditLogRepository) {
-        this.taxProfileRepository = taxProfileRepository;
-        this.productRepository = productRepository;
-        this.appUserRepository = appUserRepository;
-        this.auditLogRepository = auditLogRepository;
-    }
 
     @Transactional(readOnly = true)
     public Page<TaxProfileResponse> findAll(Pageable pageable) {

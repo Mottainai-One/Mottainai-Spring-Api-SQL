@@ -8,6 +8,7 @@ import com.institutojf.mottainai.model.SuggestedAction;
 import com.institutojf.mottainai.model.enums.SuggestedActionStatus;
 import com.institutojf.mottainai.repository.AlertRepository;
 import com.institutojf.mottainai.repository.SuggestedActionRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,15 +16,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class SuggestedActionService {
 
     private final SuggestedActionRepository suggestedActionRepository;
     private final AlertRepository alertRepository;
-
-    public SuggestedActionService(SuggestedActionRepository suggestedActionRepository, AlertRepository alertRepository) {
-        this.suggestedActionRepository = suggestedActionRepository;
-        this.alertRepository = alertRepository;
-    }
 
     @Transactional
     public SuggestedActionResponse createSuggestedAction(CreateSuggestedActionRequest request) {

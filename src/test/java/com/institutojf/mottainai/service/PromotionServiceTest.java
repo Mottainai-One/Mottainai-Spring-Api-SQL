@@ -6,6 +6,7 @@ import com.institutojf.mottainai.model.RetailStore;
 import com.institutojf.mottainai.repository.PromotionRepository;
 import com.institutojf.mottainai.repository.RetailStoreRepository;
 import com.institutojf.mottainai.security.InventoryAccess;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,6 +39,7 @@ class PromotionServiceTest {
     private PromotionService service;
 
     @Test
+    @DisplayName("Should reject update for promotion from another store")
     void shouldRejectUpdateForPromotionFromAnotherStore() {
         Promotion promotion = promotionInStore(10);
         when(promotionRepository.findById(7)).thenReturn(Optional.of(promotion));

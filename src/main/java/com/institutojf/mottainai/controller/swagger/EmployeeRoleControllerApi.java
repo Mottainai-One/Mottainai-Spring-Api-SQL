@@ -18,7 +18,10 @@ import java.util.List;
 public interface EmployeeRoleControllerApi {
 
     @Operation(summary = "List active employee roles")
-    @ApiResponse(responseCode = "200", description = "Roles found", content = @Content(schema = @Schema(implementation = EmployeeRoleResponse.class)))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Roles found", content = @Content(schema = @Schema(implementation = EmployeeRoleResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Authentication required")
+    })
     ResponseEntity<List<EmployeeRoleResponse>> findAll();
 
     @Operation(summary = "Get an employee role")

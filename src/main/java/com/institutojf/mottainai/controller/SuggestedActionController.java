@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.request.CreateSuggestedActionRequest;
 import com.institutojf.mottainai.dto.response.SuggestedActionResponse;
 import com.institutojf.mottainai.service.SuggestedActionService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,13 +21,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/suggestions")
+@RequiredArgsConstructor
 public class SuggestedActionController implements SuggestedActionControllerApi {
 
     private final SuggestedActionService suggestedActionService;
-
-    public SuggestedActionController(SuggestedActionService suggestedActionService) {
-        this.suggestedActionService = suggestedActionService;
-    }
 
     @Override
     @GetMapping

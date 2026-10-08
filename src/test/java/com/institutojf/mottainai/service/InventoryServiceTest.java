@@ -8,6 +8,7 @@ import com.institutojf.mottainai.repository.BatchRepository;
 import com.institutojf.mottainai.repository.InventoryRepository;
 import com.institutojf.mottainai.repository.RetailStoreRepository;
 import com.institutojf.mottainai.security.InventoryAccess;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -48,6 +49,7 @@ class InventoryServiceTest {
     private InventoryService service;
 
     @Test
+    @DisplayName("Should use store resolved from authentication when listing")
     void shouldUseStoreResolvedFromAuthenticationWhenListing() {
         when(inventoryAccess.resolveStoreId(authentication, 99)).thenReturn(2);
         when(inventoryRepository.findAllByStore_IdAndActiveTrueAndDeletedAtIsNull(2)).thenReturn(List.of());
@@ -58,6 +60,7 @@ class InventoryServiceTest {
     }
 
     @Test
+    @DisplayName("Should reject update when maximum is below minimum")
     void shouldRejectUpdateWhenMaximumIsBelowMinimum() {
         assertThrows(BusinessException.class, () -> service.update(
                 1,

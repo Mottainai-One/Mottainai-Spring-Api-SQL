@@ -15,6 +15,7 @@ import com.institutojf.mottainai.repository.BatchRepository;
 import com.institutojf.mottainai.repository.InventoryRepository;
 import com.institutojf.mottainai.repository.RetailStoreRepository;
 import com.institutojf.mottainai.security.InventoryAccess;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,20 +26,13 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
+@RequiredArgsConstructor
 public class InventoryService {
     private final InventoryRepository inventoryRepository;
     private final BatchRepository batchRepository;
     private final RetailStoreRepository retailStoreRepository;
     private final InventoryMapper inventoryMapper;
     private final InventoryAccess inventoryAccess;
-
-    public InventoryService(InventoryRepository inventoryRepository, BatchRepository batchRepository, RetailStoreRepository retailStoreRepository, InventoryMapper inventoryMapper, InventoryAccess inventoryAccess) {
-        this.inventoryRepository = inventoryRepository;
-        this.batchRepository = batchRepository;
-        this.retailStoreRepository = retailStoreRepository;
-        this.inventoryMapper = inventoryMapper;
-        this.inventoryAccess = inventoryAccess;
-    }
 
     @Transactional
     public InventoryResponse create(CreateInventoryRequest request, Authentication authentication) {

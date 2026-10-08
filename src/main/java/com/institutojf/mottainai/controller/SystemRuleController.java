@@ -5,6 +5,7 @@ import com.institutojf.mottainai.dto.request.UpdateSystemRuleRequest;
 import com.institutojf.mottainai.dto.response.SystemRuleResponse;
 import com.institutojf.mottainai.service.SystemRuleService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -20,12 +21,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/system-rules")
+@RequiredArgsConstructor
 public class SystemRuleController implements SystemRuleControllerApi {
     private final SystemRuleService systemRuleService;
-
-    public SystemRuleController(SystemRuleService systemRuleService) {
-        this.systemRuleService = systemRuleService;
-    }
 
     @Override
     @GetMapping

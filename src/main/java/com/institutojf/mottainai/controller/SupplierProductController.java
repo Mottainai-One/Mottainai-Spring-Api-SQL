@@ -6,6 +6,7 @@ import com.institutojf.mottainai.dto.request.UpdateSupplierProductRequest;
 import com.institutojf.mottainai.dto.response.SupplierProductResponse;
 import com.institutojf.mottainai.service.SupplierProductService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -22,13 +23,10 @@ import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/supplier-products")
+@RequiredArgsConstructor
 public class SupplierProductController implements SupplierProductControllerApi {
 
     private final SupplierProductService supplierProductService;
-
-    public SupplierProductController(SupplierProductService supplierProductService) {
-        this.supplierProductService = supplierProductService;
-    }
 
     @Override
     @PostMapping

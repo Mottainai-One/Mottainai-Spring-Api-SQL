@@ -10,23 +10,19 @@ import com.institutojf.mottainai.mapper.ProductCategoryMapper;
 import com.institutojf.mottainai.model.ProductCategory;
 import com.institutojf.mottainai.repository.ProductCategoryRepository;
 import com.institutojf.mottainai.repository.ProductRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class ProductCategoryService {
 
     private final ProductCategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final ProductCategoryMapper categoryMapper;
-
-    public ProductCategoryService(ProductCategoryRepository categoryRepository, ProductRepository productRepository, ProductCategoryMapper categoryMapper) {
-        this.categoryRepository = categoryRepository;
-        this.productRepository = productRepository;
-        this.categoryMapper = categoryMapper;
-    }
 
     @Transactional
     public ProductCategoryResponse create(CreateProductCategoryRequest request) {

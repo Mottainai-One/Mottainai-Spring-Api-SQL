@@ -7,6 +7,7 @@ import com.institutojf.mottainai.repository.ProductRepository;
 import com.institutojf.mottainai.repository.PromotionItemRepository;
 import com.institutojf.mottainai.repository.PromotionRepository;
 import com.institutojf.mottainai.security.InventoryAccess;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -43,6 +44,7 @@ class PromotionItemServiceTest {
     private PromotionItemService service;
 
     @Test
+    @DisplayName("Should not delete item from another promotion")
     void shouldNotDeleteItemFromAnotherPromotion() {
         Promotion promotion = new Promotion();
         promotion.setId(7);

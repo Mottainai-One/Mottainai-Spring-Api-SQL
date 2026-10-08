@@ -10,6 +10,7 @@ import com.institutojf.mottainai.mapper.SubscriptionPlanMapper;
 import com.institutojf.mottainai.model.SubscriptionPlan;
 import com.institutojf.mottainai.repository.CompanyRepository;
 import com.institutojf.mottainai.repository.SubscriptionPlanRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,17 +19,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 
 @Service
+@RequiredArgsConstructor
 public class SubscriptionPlanService {
 
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final CompanyRepository companyRepository;
     private final SubscriptionPlanMapper subscriptionPlanMapper;
-
-    public SubscriptionPlanService(SubscriptionPlanRepository subscriptionPlanRepository, CompanyRepository companyRepository, SubscriptionPlanMapper subscriptionPlanMapper) {
-        this.subscriptionPlanRepository = subscriptionPlanRepository;
-        this.companyRepository = companyRepository;
-        this.subscriptionPlanMapper = subscriptionPlanMapper;
-    }
 
     @Transactional
     public SubscriptionPlanResponse create(CreateSubscriptionPlanRequest request) {
