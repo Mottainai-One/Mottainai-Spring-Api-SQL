@@ -13,9 +13,6 @@ API REST do Mottainai para gestão de catálogo, fornecedores, empresas, lojas, 
 DB_URL=jdbc:postgresql://localhost:5432/mottainai
 DB_USER=seu_usuario
 DB_PASSWORD=sua_senha
-DB_APP_ROLE=role_da_aplicacao
-DB_MIGRATION_USER=role_de_migracao
-DB_MIGRATION_PASSWORD=senha_do_role_de_migracao
 JWT_SECRET=<segredo-Base64-com-pelo-menos-32-bytes>
 CORS_ALLOWED_ORIGINS=http://localhost:3000
 FIREBASE_PROJECT_ID=seu-projeto-firebase
@@ -25,19 +22,17 @@ FIREBASE_PROJECT_ID=seu-projeto-firebase
 
 ## Banco de dados
 
-A aplicação valida o mapeamento JPA (`spring.jpa.hibernate.ddl-auto=validate`).
+A configuração padrão mantém o Flyway desabilitado e valida o mapeamento JPA (`spring.jpa.hibernate.ddl-auto=validate`). O provisionamento e as alterações estruturais pertencem à equipe de dados, no repositório `Mottainai-Banco-Operacional`, branch `develop`, diretório `database/operational`.
 
-O schema operacional de referência está no projeto `Mottainai-Banco-Operacional`. O banco precisa estar provisionado antes de iniciar a API. O Flyway fica desativado por padrão. Para desenvolvimento local, o perfil `local` executa apenas as migrations provisórias em `src/main/resources/db/migration-local`, partindo de um schema operacional já existente. As migrations V1 a V9 permanecem intactas.
+As migrations V1–V9 são históricas e não representam o schema operacional completo. A V10 depende das tabelas operacionais, de colunas usadas nas views e da role `mottainai_api`; não deve ser aplicada sobre um banco vazio provisionado apenas pelas migrations antigas. O perfil `local` aponta para `classpath:db/migration-local`, atualmente sem scripts, e não aplica a V10 de `db/migration`.
 
-Configure `DB_APP_ROLE` com um role de login existente, sem `SUPERUSER`, `BYPASSRLS`, propriedade das tabelas protegidas ou permissão de `CREATE` no schema `mottainai`. Configure `DB_MIGRATION_USER` como um role distinto, com permissão para aplicar as migrations e definir as funções de bootstrap. A senha de `DB_APP_ROLE` é informada em `DB_PASSWORD`. Execute o perfil local somente em banco de desenvolvimento isolado. V12 concede à aplicação os privilégios mínimos para os fluxos de autenticação e funcionários; os demais módulos ainda dependem dos grants operacionais próprios. V13 exige emails únicos sem diferenciar maiúsculas e valida cargo e loja nos tokens de recuperação e convite. A migration interrompe a instalação se já houver emails duplicados por essa regra. As estruturas e os grants provisórios de V10 a V13 precisam ser aprovados e incorporados ao banco operacional antes de usar esta versão da API fora desse ambiente.
+Antes de publicar a API, a equipe de dados deve disponibilizar o schema compatível e as funções/permissões acordadas. Só depois devem ser aplicadas as views, índices e funções necessárias aos repositories. A inicialização da API valida o resultado; ativar Flyway não substitui esse provisionamento. Os ajustes de RLS, autenticação e sessões precisam ser validados em PostgreSQL com a role real da API, sem usar proprietário, superusuário ou `BYPASSRLS`.
 
 ## Executar
 
 ```bash
 bash ./mvnw spring-boot:run
 ```
-
-Para iniciar o perfil de desenvolvimento com migrations provisórias, defina `SPRING_PROFILES_ACTIVE=local` no ambiente antes de executar o comando acima.
 
 Documentação interativa:
 
@@ -49,14 +44,21 @@ Documentação interativa:
 
 ### Equipe
 
-1. Faça `POST /api/v1/auth/login` com CPF e senha.
-2. Envie o access token retornado nas rotas de equipe:
+1. Faça `POST /api/v1/auth/login` com `cpf` (11 dígitos) e `password`.
+2. A resposta contém `accessToken`, `refreshToken`, `tokenType`, `expiresIn` e `refreshExpiresIn`; os prazos são em segundos.
+3. Envie o access token nas rotas de equipe:
 
 ```http
 Authorization: Bearer <jwt>
 ```
 
-`GET /api/v1/**` exige usuário autenticado. Operações de escrita exigem `ADMINISTRATOR` ou `MANAGER`; há restrições adicionais em empresas, planos, lojas e perfis de usuário.
+`POST /api/v1/auth/refresh` recebe `refreshToken` e devolve um novo par de tokens, rotacionando o refresh token. Serialize as renovações e descarte o refresh anterior. `POST /api/v1/auth/logout` recebe `refreshToken` no corpo e exige o access token no cabeçalho.
+
+Troca de senha, desativação e mudança de cargo revogam as sessões do funcionário. Após essas operações, o app deve exigir novo login quando receber `401`.
+
+`PUT /api/v1/auth/password-recovery` recebe `cpf` e `email` para enviar um link. `GET /api/v1/auth/password-reset/validate?token=...` valida o link e `POST /api/v1/auth/password-reset` recebe `token` e `newPassword`. Funcionários convidados usam o link para definir a senha e ativar a conta; o administrador pode reenviar o convite por `POST /api/v1/employees/{id}/invite`.
+
+As rotas operacionais exigem JWT da API. Escritas exigem `ADMINISTRATOR` ou `MANAGER`, com restrições adicionais por rota e escopo da empresa/loja. Tokens Firebase não substituem a autenticação de funcionários.
 
 ### Cliente (fidelidade)
 
@@ -66,29 +68,44 @@ As rotas em `/api/v1/client/loyalty/**` exigem um Firebase ID token. O `sub` do 
 Authorization: Bearer <firebase-id-token>
 ```
 
+Esse fluxo permanece Firebase e identifica o cliente pelo UID, sem procurar outro cliente por e-mail caso o UID não exista.
+
+O perfil do app está em `GET /api/v1/client/auth/profile`, com CPF mascarado. A renovação do ID token e o logout no dispositivo são feitos pelo SDK Firebase, sem enviar refresh tokens ao backend. `signOut()` encerra a sessão no dispositivo; não revoga imediatamente um ID token já emitido. Veja a [gestão de sessões Firebase](https://firebase.google.com/docs/auth/admin/manage-sessions).
+
+As rotas documentadas `/api/v1/customers/auth/**` usam a conta SQL em `customer_auth` e emitem JWT interno; esse JWT não é aceito nas rotas Firebase de `/api/v1/client/**`. O perfil SQL está em `GET /api/v1/customers/auth/profile`, exclusivo de `CUSTOMER`. O fluxo SQL continua emitindo somente access token; não deve substituir a sessão Firebase do app.
+
 ## Endpoints
 
 | Módulo | Rotas |
 | --- | --- |
-| Autenticação | `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `POST /api/v1/auth/refresh`, `GET /api/v1/auth/profile`, `POST /api/v1/auth/password-recovery`, `PUT /api/v1/auth/password`, `GET /api/v1/auth/password-reset/validate`, `POST /api/v1/auth/password-reset` |
-| Endereços | `POST, GET /api/v1/addresses`; `GET, PUT /api/v1/addresses/{id}` |
-| Empresas | `POST, GET /api/v1/companies`; `GET, PUT, DELETE /api/v1/companies/{id}` |
-| Planos | `POST, GET /api/v1/subscription-plans`; `GET, PUT, DELETE /api/v1/subscription-plans/{id}` |
-| Lojas | `POST, GET /api/v1/stores`; `GET, PUT, DELETE /api/v1/stores/{id}` |
-| Categorias | `POST, GET /api/v1/product-categories`; `GET, PUT, DELETE /api/v1/product-categories/{id}` |
-| Produtos | `POST, GET /api/v1/products`; `GET, PUT, DELETE /api/v1/products/{id}`; `GET /api/v1/products/barcode/{barcode}` |
-| Fornecedores | `POST, GET /api/v1/suppliers`; `GET, PUT, DELETE /api/v1/suppliers/{id}` |
-| Produtos de fornecedor | `POST, GET /api/v1/supplier-products`; `GET, PUT, DELETE /api/v1/supplier-products/{id}` |
-| Lotes | `POST, GET /api/v1/batches`; `GET /api/v1/batches/{id}` |
+| Autenticação | `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/profile` |
+| Senha de funcionário | `PUT /api/v1/auth/password-recovery`, `GET /api/v1/auth/password-reset/validate`, `POST /api/v1/auth/password-reset`, `PUT /api/v1/auth/password` |
+| Funcionários | `POST /api/v1/employees`; `GET /api/v1/employees-store`, `GET /api/v1/employees-company`; `GET, PUT, DELETE /api/v1/employees/{id}`; `PUT /api/v1/employees/{id}/status`; `POST /api/v1/employees/{id}/invite` |
+| Histórico de funcionário | `GET /api/v1/employees/{id}/audit-logs`, `GET /api/v1/employees/{id}/shifts`, `GET /api/v1/employees/{id}/cancel-request` |
 | Estoque | `GET, POST /api/v1/inventory`; `GET, PUT, DELETE /api/v1/inventory/{id}`; `GET /api/v1/inventory/barcode/{barcode}`; `GET /api/v1/inventory/expiring`; `GET, POST /api/v1/inventory/{id}/movements` |
-| Alertas | `GET, POST /api/v1/alerts`; `GET /api/v1/alerts/{id}`; `POST /api/v1/alerts/{id}/resolve` |
-| Sugestões | `GET, POST /api/v1/suggestions`; `GET /api/v1/suggestions/{id}`; `POST /api/v1/suggestions/{id}/approve`, `POST /api/v1/suggestions/{id}/reject` |
-| Promoções | `GET, POST /api/v1/promotions`; `GET, PUT /api/v1/promotions/{id}`; `POST /api/v1/promotions/{id}/activate`, `POST /api/v1/promotions/{id}/deactivate` |
-| Itens de promoção | `GET, POST /api/v1/promotions/{promotionId}/items`; `DELETE /api/v1/promotions/{promotionId}/items/{id}` |
-| Funcionários | `POST /api/v1/employees`, `GET /api/v1/employees-store`, `GET /api/v1/employees-company`, `GET, PUT, DELETE /api/v1/employees/{id}`, `PUT /api/v1/employees/{id}/status`, `GET /api/v1/employees/{id}/audit-logs`, `GET /api/v1/employees/{id}/shifts`, `GET /api/v1/employees/{id}/cancel-request` |
+| Contagens | `GET, POST /api/v1/inventory-counts`; `GET /api/v1/inventory-counts/{id}`; `POST /api/v1/inventory-counts/{id}/items`; `PUT, DELETE /api/v1/inventory-counts/{id}/items/{itemId}`; `POST /api/v1/inventory-counts/{id}/finish` |
 | Fidelidade do cliente | `GET /api/v1/client/loyalty/balance`, `GET /api/v1/client/loyalty/transactions`, `POST /api/v1/client/loyalty/redeem` |
 
-As listagens paginadas aceitam os parâmetros padrão do Spring Data, como `page`, `size` e `sort`. Consulte o Swagger para os DTOs de request/response, exemplos e códigos de erro de cada operação.
+Esta tabela destaca os contratos de integração afetados pela revisão. Consulte `/api-docs` ou o Swagger para a lista completa de rotas, DTOs, parâmetros e códigos HTTP; nem toda listagem possui paginação.
+
+### Substituição das rotas antigas de equipe
+
+| Rota antiga | Contrato atual |
+| --- | --- |
+| `GET /api/v1/users/me` | `GET /api/v1/auth/profile` |
+| `GET /api/v1/stores/me` | Obter `storeId` no perfil e consultar `GET /api/v1/stores/{id}` |
+| `GET /api/v1/store-users` | `GET /api/v1/employees-store`; administradores também podem consultar `/employees-company` |
+| `GET /api/v1/store-users/{id}` | `GET /api/v1/employees/{id}` |
+| `POST /api/v1/store-users/invite` | `POST /api/v1/employees`; reenvio em `POST /api/v1/employees/{id}/invite` |
+| `PATCH /api/v1/store-users/{id}` | `PUT /api/v1/employees/{id}`; status em `PUT /api/v1/employees/{id}/status` |
+
+As novas rotas usam o ID de `employee`, não o ID de `app_user`. Os corpos e as permissões também devem seguir o OpenAPI atual; trocar apenas a URL não basta.
+
+### Concorrência, histórico e idempotência
+
+Atualizações de produto e inventário exigem `version` obtido na leitura. Em `409 Conflict`, recarregue os dados antes de permitir uma nova edição. Consultas de movimentação exigem `from` e `to` em ISO date-time, com início menor ou igual ao fim e intervalo máximo de seis meses.
+
+Envie `Idempotency-Key` nas operações críticas que o OpenAPI exigir, incluindo resgate de fidelidade, criação de movimentação, finalização de contagem e recebimento de transferência. Gere uma chave por intenção e reutilize-a apenas para repetir a mesma requisição; nunca gere outra chave automaticamente para contornar um conflito.
 
 ## Validação
 
