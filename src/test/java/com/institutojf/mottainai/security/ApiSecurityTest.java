@@ -37,8 +37,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest({ ApiSecurityTest.SecurityTestController.class, EmployeeController.class })
-@Import({ SecurityConfig.class, DatabaseUserDetailsService.class, ApiSecurityTest.SecurityTestController.class })
+@WebMvcTest({ ApiSecurityTest.SecurityTestController.class, ApiSecurityTest.CatalogSecurityTestController.class,
+        EmployeeController.class })
+@Import({ SecurityConfig.class, DatabaseUserDetailsService.class, ApiSecurityTest.SecurityTestController.class,
+        ApiSecurityTest.CatalogSecurityTestController.class })
 @TestPropertySource(properties = { "security.jwt.secret=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
         "security.jwt.issuer=https://mottainai.local", "security.jwt.expiration-minutes=60",
         "security.cors.allowed-origins=https://app.example" })
@@ -110,6 +112,19 @@ class ApiSecurityTest {
     }
 
     @Test
+    @DisplayName("Should reserve customer catalog reads for authenticated customers")
+    void shouldReserveCustomerCatalogForCustomers() throws Exception {
+        mockMvc.perform(get("/api/v1/customer-catalog/security-probe"))
+            .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/customer-catalog/security-probe")
+                .with(user("admin@mottainai.com").roles("ADMINISTRATOR")))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/customer-catalog/security-probe")
+                .with(user("customer@mottainai.com").roles("CUSTOMER")))
+            .andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("Should proxy the secured employee controller with CGLIB")
     void shouldProxyEmployeeControllerWithCglib() {
         assertTrue(AopUtils.isCglibProxy(employeeController));
@@ -149,6 +164,15 @@ class ApiSecurityTest {
         @PatchMapping
         public String update() {
             return "updated";
+        }
+    }
+
+    @RestController
+    @RequestMapping("/api/v1/customer-catalog/security-probe")
+    static class CatalogSecurityTestController {
+        @GetMapping
+        public String read() {
+            return "ok";
         }
     }
 
