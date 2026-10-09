@@ -23,9 +23,13 @@ import java.time.ZoneOffset;
 @Service
 @RequiredArgsConstructor
 public class TaxProfileService {
+
     private final TaxProfileRepository taxProfileRepository;
+
     private final ProductRepository productRepository;
+
     private final AppUserRepository appUserRepository;
+
     private final AuditLogRepository auditLogRepository;
 
     @Transactional(readOnly = true)
@@ -50,7 +54,8 @@ public class TaxProfileService {
         profile.setCode(code);
         profile.setActive(true);
         profile = taxProfileRepository.save(profile);
-        auditLogRepository.record("tax_profile", "INSERT", profile.getId().toString(), actor.getId(), null, toResponse(profile));
+        auditLogRepository.record("tax_profile", "INSERT", profile.getId().toString(), actor.getId(), null,
+                toResponse(profile));
         return toResponse(profile);
     }
 
@@ -59,21 +64,22 @@ public class TaxProfileService {
         TaxProfile profile = findActiveProfile(id);
         String code = request.code().trim();
         taxProfileRepository.findByCodeIgnoreCase(code)
-                .filter(existing -> !existing.getId().equals(id))
-                .ifPresent(existing -> {
-                    throw new ConflictException("Tax profile code already exists");
-                });
+            .filter(existing -> !existing.getId().equals(id))
+            .ifPresent(existing -> {
+                throw new ConflictException("Tax profile code already exists");
+            });
         AppUser actor = findActor(actorEmail);
         TaxProfileResponse oldData = toResponse(profile);
         apply(profile, request);
         profile.setCode(code);
         profile = taxProfileRepository.save(profile);
-        auditLogRepository.record("tax_profile", "UPDATE", profile.getId().toString(), actor.getId(), oldData, toResponse(profile));
+        auditLogRepository.record("tax_profile", "UPDATE", profile.getId().toString(), actor.getId(), oldData,
+                toResponse(profile));
         return toResponse(profile);
     }
 
     @Transactional
-    public void deactivate(Integer id, String actorEmail) {
+    public void delete(Integer id, String actorEmail) {
         TaxProfile profile = findActiveProfile(id);
         if (productRepository.existsByTaxProfile_IdAndActiveTrueAndDeletedAtIsNull(id)) {
             throw new BusinessException("Tax profile is used by active products");
@@ -83,7 +89,8 @@ public class TaxProfileService {
         profile.setActive(false);
         profile.setDeletedAt(LocalDateTime.now(ZoneOffset.UTC));
         profile = taxProfileRepository.save(profile);
-        auditLogRepository.record("tax_profile", "UPDATE", profile.getId().toString(), actor.getId(), oldData, toResponse(profile));
+        auditLogRepository.record("tax_profile", "UPDATE", profile.getId().toString(), actor.getId(), oldData,
+                toResponse(profile));
     }
 
     private void apply(TaxProfile profile, TaxProfileRequest request) {
@@ -103,32 +110,20 @@ public class TaxProfileService {
 
     private TaxProfile findActiveProfile(Integer id) {
         return taxProfileRepository.findByIdAndActiveTrueAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Tax profile not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Tax profile not found"));
     }
 
     private AppUser findActor(String email) {
         return appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
     }
 
     private TaxProfileResponse toResponse(TaxProfile profile) {
-        return new TaxProfileResponse(
-                profile.getId(),
-                profile.getCode(),
-                profile.getName(),
-                profile.getDescription(),
-                profile.getCfop(),
-                profile.getIcmsCst(),
-                profile.getIcmsCsosn(),
-                profile.getIcmsRate(),
-                profile.getIpiCst(),
-                profile.getIpiRate(),
-                profile.getPisCst(),
-                profile.getPisRate(),
-                profile.getCofinsCst(),
-                profile.getCofinsRate(),
-                profile.getActive(),
-                profile.getCreatedAt(),
+        return new TaxProfileResponse(profile.getId(), profile.getCode(), profile.getName(), profile.getDescription(),
+                profile.getCfop(), profile.getIcmsCst(), profile.getIcmsCsosn(), profile.getIcmsRate(),
+                profile.getIpiCst(), profile.getIpiRate(), profile.getPisCst(), profile.getPisRate(),
+                profile.getCofinsCst(), profile.getCofinsRate(), profile.getActive(), profile.getCreatedAt(),
                 profile.getUpdatedAt());
     }
+
 }
