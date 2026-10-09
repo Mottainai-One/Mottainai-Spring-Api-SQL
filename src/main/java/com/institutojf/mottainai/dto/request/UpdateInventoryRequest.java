@@ -11,6 +11,6 @@ public record UpdateInventoryRequest(
         @NotNull @DecimalMin("0.000") @Digits(integer = 7, fraction = 3) BigDecimal minimumQuantity,
         @DecimalMin("0.000") @Digits(integer = 7, fraction = 3) BigDecimal maximumQuantity,
         @Size(max = 80) String location,
-        Integer version
+        @NotNull Integer version
 ) {
 }
