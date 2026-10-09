@@ -2,6 +2,7 @@ package com.institutojf.mottainai.controller.swagger;
 
 import com.institutojf.mottainai.dto.request.CreateRetailStoreRequest;
 import com.institutojf.mottainai.dto.request.UpdateRetailStoreRequest;
+import com.institutojf.mottainai.dto.request.UpdateActiveStatusRequest;
 import com.institutojf.mottainai.dto.response.RetailStoreResponse;
 import com.institutojf.mottainai.handler.ApiError;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 
 @Tag(name = "Retail Stores", description = "API for managing retail stores")
 public interface RetailStoreControllerApi {
@@ -48,11 +50,18 @@ public interface RetailStoreControllerApi {
     })
     ResponseEntity<RetailStoreResponse> update(Integer id, UpdateRetailStoreRequest request);
 
-    @Operation(summary = "Deactivate a retail store")
+    @Operation(summary = "Change retail store active status")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Retail store deactivated"),
-            @ApiResponse(responseCode = "400", description = "Retail store cannot be deactivated", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<RetailStoreResponse> updateStatus(Integer id, UpdateActiveStatusRequest request);
+
+    @Operation(summary = "Logically delete a retail store")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Retail store logically deleted"),
+            @ApiResponse(responseCode = "400", description = "Retail store cannot be logically deleted", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Retail store not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<Void> deactivate(Integer id);
+    ResponseEntity<Void> delete(Integer id, Authentication authentication);
+
 }

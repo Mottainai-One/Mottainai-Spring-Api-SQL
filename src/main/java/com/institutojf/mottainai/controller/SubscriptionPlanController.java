@@ -38,6 +38,7 @@ public class SubscriptionPlanController implements SubscriptionPlanControllerApi
         return ResponseEntity.created(location).body(plan);
     }
 
+    @Override
     @GetMapping
     public ResponseEntity<Page<SubscriptionPlanResponse>> findAll(Pageable pageable) {
         return ResponseEntity.ok(subscriptionPlanService.findAll(pageable));
@@ -49,14 +50,17 @@ public class SubscriptionPlanController implements SubscriptionPlanControllerApi
         return ResponseEntity.ok(subscriptionPlanService.findById(id));
     }
 
+    @Override
     @PutMapping("/{id}")
     public ResponseEntity<SubscriptionPlanResponse> update(@PathVariable Integer id, @Valid @RequestBody UpdateSubscriptionPlanRequest request) {
         return ResponseEntity.ok(subscriptionPlanService.update(id, request));
     }
 
+    @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
-        subscriptionPlanService.deactivate(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        subscriptionPlanService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
 }

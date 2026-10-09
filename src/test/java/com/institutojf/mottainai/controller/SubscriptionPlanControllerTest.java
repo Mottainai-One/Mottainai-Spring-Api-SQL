@@ -44,43 +44,38 @@ class SubscriptionPlanControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(subscriptionPlanController)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build();
+            .setControllerAdvice(new GlobalExceptionHandler())
+            .build();
     }
 
     @Test
     @DisplayName("Should create subscription plan with location header")
     void shouldCreateSubscriptionPlanWithLocationHeader() throws Exception {
         when(subscriptionPlanService.create(any())).thenReturn(response());
-
-        mockMvc.perform(post("/api/v1/subscription-plans")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request())))
-                .andExpect(status().isCreated())
-                .andExpect(header().string("Location", "/api/v1/subscription-plans/1"))
-                .andExpect(jsonPath("$.name").value("Basic"));
-
+        mockMvc
+            .perform(post("/api/v1/subscription-plans").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request())))
+            .andExpect(status().isCreated())
+            .andExpect(header().string("Location", "/api/v1/subscription-plans/1"))
+            .andExpect(jsonPath("$.name").value("Basic"));
         verify(subscriptionPlanService).create(any());
     }
 
     @Test
     @DisplayName("Should reject subscription plan with non positive store limit")
     void shouldRejectSubscriptionPlanWithNonPositiveStoreLimit() throws Exception {
-        mockMvc.perform(post("/api/v1/subscription-plans")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Basic\",\"price\":99.90,\"storeLimit\":0,\"userLimit\":5}"))
-                .andExpect(status().isBadRequest());
-
+        mockMvc
+            .perform(post("/api/v1/subscription-plans").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Basic\",\"price\":99.90,\"storeLimit\":0,\"userLimit\":5}"))
+            .andExpect(status().isBadRequest());
         verify(subscriptionPlanService, never()).create(any());
     }
 
     @Test
     @DisplayName("Should deactivate subscription plan with no content response")
     void shouldDeactivateSubscriptionPlanWithNoContentResponse() throws Exception {
-        mockMvc.perform(delete("/api/v1/subscription-plans/1"))
-                .andExpect(status().isNoContent());
-
-        verify(subscriptionPlanService).deactivate(1);
+        mockMvc.perform(delete("/api/v1/subscription-plans/1")).andExpect(status().isNoContent());
+        verify(subscriptionPlanService).delete(1);
     }
 
     private CreateSubscriptionPlanRequest request() {
@@ -90,4 +85,5 @@ class SubscriptionPlanControllerTest {
     private SubscriptionPlanResponse response() {
         return new SubscriptionPlanResponse(1, "Basic", "Entry plan", new BigDecimal("99.90"), 2, 5, true);
     }
+
 }
