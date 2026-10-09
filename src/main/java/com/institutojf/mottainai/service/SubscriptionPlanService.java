@@ -17,13 +17,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
 public class SubscriptionPlanService {
 
     private final SubscriptionPlanRepository subscriptionPlanRepository;
+
     private final CompanyRepository companyRepository;
+
     private final SubscriptionPlanMapper subscriptionPlanMapper;
 
     @Transactional
@@ -31,21 +34,17 @@ public class SubscriptionPlanService {
         if (subscriptionPlanRepository.existsByNameIgnoreCase(request.name())) {
             throw new ConflictException("Subscription plan name already exists");
         }
-
         SubscriptionPlan plan = new SubscriptionPlan();
         plan.setActive(true);
-        applyPlanFields(
-                request.name(), request.description(), request.price(),
-                request.storeLimit(), request.userLimit(), plan
-        );
-
+        applyPlanFields(request.name(), request.description(), request.price(), request.storeLimit(),
+                request.userLimit(), plan);
         return subscriptionPlanMapper.toResponse(subscriptionPlanRepository.save(plan));
     }
 
     @Transactional(readOnly = true)
     public Page<SubscriptionPlanResponse> findAll(Pageable pageable) {
         return subscriptionPlanRepository.findAllByActiveTrueAndDeletedAtIsNull(pageable)
-                .map(subscriptionPlanMapper::toResponse);
+            .map(subscriptionPlanMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -62,20 +61,18 @@ public class SubscriptionPlanService {
         if (Boolean.FALSE.equals(request.active())) {
             ensureCanDeactivate(id);
         }
-        applyPlanFields(
-                request.name(), request.description(), request.price(),
-                request.storeLimit(), request.userLimit(), plan
-        );
+        applyPlanFields(request.name(), request.description(), request.price(), request.storeLimit(),
+                request.userLimit(), plan);
         plan.setActive(request.active());
-
         return subscriptionPlanMapper.toResponse(subscriptionPlanRepository.save(plan));
     }
 
     @Transactional
-    public void deactivate(Integer id) {
+    public void delete(Integer id) {
         SubscriptionPlan plan = findActivePlanById(id);
         ensureCanDeactivate(id);
         plan.setActive(false);
+        plan.setDeletedAt(LocalDateTime.now());
         subscriptionPlanRepository.save(plan);
     }
 
@@ -87,12 +84,12 @@ public class SubscriptionPlanService {
 
     private SubscriptionPlan findActivePlanById(Integer id) {
         return subscriptionPlanRepository.findByIdAndActiveTrueAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription plan not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Subscription plan not found"));
     }
 
     private SubscriptionPlan findPlanById(Integer id) {
         return subscriptionPlanRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription plan not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Subscription plan not found"));
     }
 
     private void applyPlanFields(String name, String description, BigDecimal price, Integer storeLimit, Integer userLimit, SubscriptionPlan plan) {
@@ -102,4 +99,5 @@ public class SubscriptionPlanService {
         plan.setStoreLimit(storeLimit);
         plan.setUserLimit(userLimit);
     }
+
 }

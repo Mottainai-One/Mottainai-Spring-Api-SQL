@@ -47,11 +47,12 @@ public interface SubscriptionPlanControllerApi {
     })
     ResponseEntity<SubscriptionPlanResponse> update(Integer id, UpdateSubscriptionPlanRequest request);
 
-    @Operation(summary = "Deactivate a subscription plan")
+    @Operation(summary = "Logically delete a subscription plan")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Subscription plan deactivated"),
-            @ApiResponse(responseCode = "400", description = "Subscription plan cannot be deactivated", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "204", description = "Subscription plan logically deleted"),
+            @ApiResponse(responseCode = "400", description = "Subscription plan cannot be logically deleted", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Subscription plan not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<Void> deactivate(Integer id);
+    ResponseEntity<Void> delete(Integer id);
+
 }
