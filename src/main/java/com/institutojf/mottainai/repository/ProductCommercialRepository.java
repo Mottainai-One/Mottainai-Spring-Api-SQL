@@ -18,10 +18,10 @@ import java.util.Optional;
 
 public interface ProductCommercialRepository extends Repository<AppUser, Integer> {
 
-    @Query(value = "SELECT * FROM mottainai.vw_api_store_product_price WHERE product_id = :productId AND active = TRUE AND valid_until IS NULL ORDER BY store_id", nativeQuery = true)
+    @Query(value = "SELECT store_product_price_id, store_id, product_id, regular_price, valid_from, valid_until, active, version FROM mottainai.vw_api_store_product_price WHERE product_id = :productId AND active = TRUE AND valid_until IS NULL ORDER BY store_id", nativeQuery = true)
     List<StorePriceProjection> queryStorePrices(@Param("productId") Integer productId);
 
-    @Query(value = "SELECT * FROM mottainai.vw_api_store_product_price WHERE product_id = :productId AND store_id = :storeId AND active = TRUE AND valid_until IS NULL FOR UPDATE", nativeQuery = true)
+    @Query(value = "SELECT store_product_price_id, store_id, product_id, regular_price, valid_from, valid_until, active, version FROM mottainai.vw_api_store_product_price WHERE product_id = :productId AND store_id = :storeId AND active = TRUE AND valid_until IS NULL FOR UPDATE", nativeQuery = true)
     Optional<StorePriceProjection> queryStorePriceForUpdate(@Param("productId") Integer productId, @Param("storeId") Integer storeId);
 
     @Modifying
@@ -36,10 +36,10 @@ public interface ProductCommercialRepository extends Repository<AppUser, Integer
     @Query(value = "INSERT INTO mottainai.product_price_history (product_id, old_price, new_price, changed_by) VALUES (:productId, :oldPrice, :newPrice, :changedBy)", nativeQuery = true)
     int insertPriceHistory(@Param("productId") Integer productId, @Param("oldPrice") BigDecimal oldPrice, @Param("newPrice") BigDecimal newPrice, @Param("changedBy") Integer changedBy);
 
-    @Query(value = "SELECT * FROM mottainai.vw_api_product_history WHERE product_id = :productId AND changed_at BETWEEN :from AND :to ORDER BY changed_at DESC, history_id DESC", nativeQuery = true)
+    @Query(value = "SELECT history_id, product_id, field_name, old_value, new_value, changed_by, changed_at FROM mottainai.vw_api_product_history WHERE product_id = :productId AND changed_at BETWEEN :from AND :to ORDER BY changed_at DESC, history_id DESC", nativeQuery = true)
     List<ProductHistoryProjection> queryMasterHistory(@Param("productId") Integer productId, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    @Query(value = "SELECT * FROM mottainai.vw_api_product_price_history WHERE product_id = :productId AND changed_at BETWEEN :from AND :to ORDER BY changed_at DESC, price_history_id DESC", nativeQuery = true)
+    @Query(value = "SELECT price_history_id, product_id, old_price, new_price, changed_by, changed_at FROM mottainai.vw_api_product_price_history WHERE product_id = :productId AND changed_at BETWEEN :from AND :to ORDER BY changed_at DESC, price_history_id DESC", nativeQuery = true)
     List<ProductPriceHistoryProjection> queryPriceHistory(@Param("productId") Integer productId, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query(value = "SELECT purchase_order_id, store_id, employee_id, order_date, expected_delivery_date, status, total_amount FROM mottainai.vw_api_purchase_order WHERE supplier_id = :supplierId AND deleted_at IS NULL AND order_date BETWEEN :from AND :to ORDER BY order_date DESC", nativeQuery = true)
