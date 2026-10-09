@@ -1,6 +1,7 @@
 package com.institutojf.mottainai.repository;
 
 import com.institutojf.mottainai.model.Inventory;
+import com.institutojf.mottainai.model.Product;
 import com.institutojf.mottainai.model.enums.InventoryType;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,14 +9,15 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-import com.institutojf.mottainai.model.Product;
-
 public interface InventoryRepository extends JpaRepository<Inventory, Integer> {
+
+    @Query(value = "SELECT mottainai.fn_atomic_update_inventory(:inventoryId, :quantity, CAST(:movementType AS mottainai.movement_type), :employeeId, :observation, :version)", nativeQuery = true)
+    BigDecimal applyAtomicMovement(@Param("inventoryId") Integer inventoryId, @Param("quantity") BigDecimal quantity, @Param("movementType") String movementType, @Param("employeeId") Integer employeeId, @Param("observation") String observation, @Param("version") Integer version);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from Inventory i where i.id = :id and i.deletedAt is null")

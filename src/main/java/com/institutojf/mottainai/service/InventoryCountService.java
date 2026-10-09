@@ -18,8 +18,8 @@ import com.institutojf.mottainai.repository.InventoryCountRepository;
 import com.institutojf.mottainai.repository.InventoryRepository;
 import com.institutojf.mottainai.repository.OutboxEventRepository;
 import com.institutojf.mottainai.security.InventoryAccess;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +43,7 @@ public class InventoryCountService {
 
     private final InventoryAccess inventoryAccess;
 
-    private final JdbcTemplate jdbcTemplate;
+    private final EntityManager entityManager;
 
     private final OutboxEventRepository outboxEventRepository;
 
@@ -153,10 +153,9 @@ public class InventoryCountService {
             }
             BigDecimal difference = item.getCountedQuantity().subtract(item.getSystemQuantity());
             if (difference.signum() != 0) {
-                jdbcTemplate.queryForObject(
-                        "select mottainai.fn_atomic_update_inventory(?, ?, ?::mottainai.movement_type, ?, ?, ?)",
-                        BigDecimal.class, inventory.getId(), difference, MovementType.ADJUSTMENT.name(), employeeId,
+                inventoryRepository.applyAtomicMovement(inventory.getId(), difference, MovementType.ADJUSTMENT.name(), employeeId,
                         "Inventory count " + countId, inventory.getVersion());
+                entityManager.refresh(inventory);
             }
         }
         count.setStatus(InventoryCountStatus.COMPLETED);
