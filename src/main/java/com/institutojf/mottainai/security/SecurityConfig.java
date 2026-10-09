@@ -124,6 +124,8 @@ public class SecurityConfig {
                 .authenticated()
                 .requestMatchers("/api/v1/auth/logout", "/api/v1/auth/password")
                 .authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/customer-catalog/**")
+                .hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.GET, "/api/v1/**")
                 .access(new WebExpressionAuthorizationManager("isAuthenticated() and !hasRole('CUSTOMER')"))
                 .requestMatchers(HttpMethod.POST, "/api/v1/**")
