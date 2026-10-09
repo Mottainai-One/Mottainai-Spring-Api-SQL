@@ -13,6 +13,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
+
 /**
  * Define o contexto RLS do funcionário antes dos serviços transacionais.
  */
@@ -21,7 +23,9 @@ import org.springframework.stereotype.Component;
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 @RequiredArgsConstructor
 public class RlsContextAspect {
+
     private final RlsContextService rlsContextService;
+
     private final JwtProperties jwtProperties;
 
     @Around("within(com.institutojf.mottainai.service..*) "
@@ -30,7 +34,12 @@ public class RlsContextAspect {
     public Object setContext(ProceedingJoinPoint joinPoint) throws Throwable {
         // Apenas JWTs internos precisam inicializar o contexto de funcionário
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication instanceof JwtAuthenticationToken token
+        boolean customerOnly = authentication != null && authentication.getAuthorities()
+            .stream()
+            .map(authority -> authority.getAuthority())
+            .collect(java.util.stream.Collectors.toSet())
+            .equals(Set.of("ROLE_CUSTOMER"));
+        if (!customerOnly && authentication instanceof JwtAuthenticationToken token
                 && jwtProperties.issuer().equals(String.valueOf(token.getToken().getIssuer()))
                 && !rlsContextService.bootstrapByEmail(token.getName())) {
             throw new BadCredentialsException("Invalid staff context");
@@ -38,4 +47,5 @@ public class RlsContextAspect {
         // A transação segue somente depois de validar o contexto de acesso
         return joinPoint.proceed();
     }
+
 }

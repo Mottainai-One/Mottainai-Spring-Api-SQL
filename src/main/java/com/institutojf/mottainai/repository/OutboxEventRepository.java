@@ -72,14 +72,6 @@ public class OutboxEventRepository {
                 Object.class, "LOYALTY_REDEMPTION", "loyalty_redemption", redemptionId, eventData, idempotencyKey);
     }
 
-    public record Event(
-            String eventType,
-            String aggregateType,
-            String aggregateId,
-            String eventData
-    ) {
-    }
-
     public boolean isPurchaseOrderFor(Event event, String requestHash) {
         if (!"PURCHASE_ORDER_CREATED".equals(event.eventType()) || !"purchase_order".equals(event.aggregateType())) {
             return false;

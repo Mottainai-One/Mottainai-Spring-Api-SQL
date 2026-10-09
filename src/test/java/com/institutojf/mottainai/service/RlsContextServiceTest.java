@@ -22,21 +22,25 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class RlsContextServiceTest {
+
     private final JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+
     private final AppUserRepository appUserRepository = mock(AppUserRepository.class);
+
     private final StaffSessionRepository staffSessionRepository = mock(StaffSessionRepository.class);
-    private final RlsContextService service = new RlsContextService(jdbcTemplate, appUserRepository, staffSessionRepository);
+
+    private final RlsContextService service = new RlsContextService(jdbcTemplate, appUserRepository,
+            staffSessionRepository);
 
     @Test
     @DisplayName("Should use the restricted database function to bootstrap CPF context")
     void shouldBootstrapCpfThroughDatabaseFunction() {
-        when(jdbcTemplate.queryForObject("SELECT mottainai.fn_bootstrap_staff_context(?, ?)",
-                Boolean.class, "12345678901", "CPF")).thenReturn(true);
-
+        when(jdbcTemplate.queryForObject("SELECT mottainai.fn_bootstrap_staff_context(?, ?)", Boolean.class,
+                "12345678901", "CPF"))
+            .thenReturn(true);
         assertTrue(service.bootstrapByCpf("12345678901"));
-
-        verify(jdbcTemplate).queryForObject("SELECT mottainai.fn_bootstrap_staff_context(?, ?)",
-                Boolean.class, "12345678901", "CPF");
+        verify(jdbcTemplate).queryForObject("SELECT mottainai.fn_bootstrap_staff_context(?, ?)", Boolean.class,
+                "12345678901", "CPF");
     }
 
     @Test
@@ -44,9 +48,7 @@ class RlsContextServiceTest {
     void shouldRejectRefreshTokenAsAccessToken() {
         Jwt jwt = mock(Jwt.class);
         when(jwt.getClaimAsString("use")).thenReturn("refresh");
-
         assertFalse(service.validateAccessToken(jwt));
-
         verifyNoInteractions(jdbcTemplate, appUserRepository, staffSessionRepository);
     }
 
@@ -57,7 +59,6 @@ class RlsContextServiceTest {
         UUID sessionId = UUID.randomUUID();
         AppUser user = new AppUser();
         user.setId(1);
-        user.setTokenVersion(2);
         EmployeeRole role = new EmployeeRole();
         role.setName("MANAGER");
         role.setActive(true);
@@ -68,15 +69,13 @@ class RlsContextServiceTest {
         when(jwt.getClaimAsString("use")).thenReturn("access");
         when(jwt.getSubject()).thenReturn("manager@example.com");
         when(jwt.getClaimAsString("sid")).thenReturn(sessionId.toString());
-        when(jwt.getClaim("tokenVersion")).thenReturn(2);
         when(jwt.getClaimAsStringList("roles")).thenReturn(List.of("ADMINISTRATOR"));
-        when(jdbcTemplate.queryForObject("SELECT mottainai.fn_bootstrap_staff_context(?, ?)",
-                Boolean.class, "manager@example.com", "EMAIL")).thenReturn(true);
+        when(jdbcTemplate.queryForObject("SELECT mottainai.fn_bootstrap_staff_context(?, ?)", Boolean.class, "manager@example.com", "EMAIL"))
+            .thenReturn(true);
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull("manager@example.com"))
-                .thenReturn(Optional.of(user));
-
+            .thenReturn(Optional.of(user));
         assertFalse(service.validateAccessToken(jwt));
-
         verifyNoInteractions(staffSessionRepository);
     }
+
 }

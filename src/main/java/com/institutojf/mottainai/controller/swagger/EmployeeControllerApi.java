@@ -21,6 +21,7 @@ import java.util.List;
 
 @Tag(name = "Employees", description = "Manage employees within the authenticated company")
 public interface EmployeeControllerApi {
+
     @Operation(summary = "Create an inactive employee and send a password invitation")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Employee created", content = @Content(schema = @Schema(implementation = EmployeeResponse.class))),
@@ -28,7 +29,8 @@ public interface EmployeeControllerApi {
             @ApiResponse(responseCode = "401", description = "Authentication required"),
             @ApiResponse(responseCode = "403", description = "Administrator role required"),
             @ApiResponse(responseCode = "404", description = "Store or role not found in the allowed scope", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "409", description = "CPF or email conflict, or database constraint violation", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "409", description = "CPF or email conflict, or database constraint violation", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "503", description = "Employee saved inactive but invitation delivery failed; resend invitation", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     ResponseEntity<EmployeeResponse> create(CreateEmployeeRequest request, Authentication authentication);
 
@@ -88,6 +90,17 @@ public interface EmployeeControllerApi {
     })
     ResponseEntity<EmployeeResponse> changeStatus(Integer id, EmployeeStatusRequest request, Authentication authentication);
 
+    @Operation(summary = "Send a new invitation to an inactive employee who has not set a password")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Invitation registered; employee returned", content = @Content(schema = @Schema(implementation = EmployeeResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Employee already has a password or is active", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Administrator role required"),
+            @ApiResponse(responseCode = "404", description = "Employee not found in the allowed scope", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "503", description = "Invitation delivery failed; employee remains inactive and can be invited again", content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    ResponseEntity<EmployeeResponse> resendInvitation(Integer id, Authentication authentication);
+
     @Operation(summary = "List employee POS shifts in a period of at most six months")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Employee shifts found", content = @Content(schema = @Schema(implementation = EmployeeShiftResponse.class))),
@@ -105,4 +118,5 @@ public interface EmployeeControllerApi {
             @ApiResponse(responseCode = "404", description = "Employee not found in the allowed scope", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     ResponseEntity<List<EmployeeCancelRequestResponse>> cancelRequests(Integer id, LocalDateTime from, LocalDateTime to, Authentication authentication);
+
 }

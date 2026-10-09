@@ -15,7 +15,9 @@ import org.springframework.stereotype.Service;
 public class PasswordResetEmailService {
 
     private final JavaMailSender mailSender;
+
     private final MailProperties mailProperties;
+
     private final StaffProperties staffProperties;
 
     public void sendRecoveryLink(String email, String token) {
@@ -23,8 +25,8 @@ public class PasswordResetEmailService {
         message.setFrom(mailProperties.getUsername());
         message.setTo(email);
         message.setSubject("Mottainai password recovery");
-        message.setText("Use this link to reset your password: " + staffProperties.passwordResetUrl() + "?token=" + token
-                + "\n\nThis link expires in 15 minutes.");
+        message.setText("Use this link to reset your password: " + staffProperties.passwordResetUrl() + "?token="
+                + token + "\n\nThis link expires in 15 minutes.");
         mailSender.send(message);
     }
 
@@ -38,4 +40,5 @@ public class PasswordResetEmailService {
                 + staffProperties.passwordResetUrl() + "?token=" + token + "\n\nThis link expires in 48 hours.");
         mailSender.send(message);
     }
+
 }
