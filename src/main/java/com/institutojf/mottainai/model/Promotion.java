@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
 
 import lombok.Getter;
@@ -23,6 +24,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "promotion")
 public class Promotion {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "promotion_id")
@@ -77,4 +79,5 @@ public class Promotion {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
 }
