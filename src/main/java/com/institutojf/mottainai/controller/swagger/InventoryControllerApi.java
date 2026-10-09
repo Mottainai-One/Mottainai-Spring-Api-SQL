@@ -35,8 +35,9 @@ public interface InventoryControllerApi {
     })
     ResponseEntity<InventoryResponse> findById(Integer id, Authentication authentication);
 
-    @Operation(summary = "Create an inventory entry")
+    @Operation(summary = "Create an inventory entry or reactivate an existing deleted entry", description = "Reactivation preserves the previous balance and management settings; the POST settings are ignored in that case")
     @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Deleted inventory entry reactivated with reactivated=true", content = @Content(schema = @Schema(implementation = InventoryResponse.class))),
             @ApiResponse(responseCode = "201", description = "Inventory entry created", content = @Content(schema = @Schema(implementation = InventoryResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Store or batch not found", content = @Content(schema = @Schema(implementation = ApiError.class))),
@@ -78,12 +79,7 @@ public interface InventoryControllerApi {
             @ApiResponse(responseCode = "404", description = "Inventory not found", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "400", description = "Invalid date range; the maximum range is six months", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<List<InventoryMovementResponse>> findMovements(
-            Integer id,
-            @Parameter(description = "Start of the movement date range (ISO date-time)", required = true) LocalDateTime from,
-            @Parameter(description = "End of the movement date range (ISO date-time), at most six months after from", required = true) LocalDateTime to,
-            Authentication authentication
-    );
+    ResponseEntity<List<InventoryMovementResponse>> findMovements(Integer id, @Parameter(description = "Start of the movement date range (ISO date-time)", required = true) LocalDateTime from, @Parameter(description = "End of the movement date range (ISO date-time), at most six months after from", required = true) LocalDateTime to, Authentication authentication);
 
     @Operation(summary = "Create an inventory movement")
     @ApiResponses({
@@ -91,5 +87,6 @@ public interface InventoryControllerApi {
             @ApiResponse(responseCode = "400", description = "Invalid request or insufficient inventory balance", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Inventory not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<InventoryMovementResponse> createMovement(Integer id, CreateInventoryMovementRequest request, Authentication authentication);
+    ResponseEntity<InventoryMovementResponse> createMovement(Integer id, CreateInventoryMovementRequest request, String idempotencyKey, Authentication authentication);
+
 }
