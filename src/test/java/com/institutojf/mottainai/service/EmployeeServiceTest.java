@@ -38,6 +38,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -163,14 +164,60 @@ class EmployeeServiceTest {
         when(tokenHashService.newToken()).thenReturn("new-invite-token");
         when(tokenHashService.hash("new-invite-token")).thenReturn("new-token-hash");
         TransactionSynchronizationManager.initSynchronization();
-
-        service.update(2, new UpdateEmployeeRequest("Employee", "12345678901",
-                "new@example.com", null, null), "admin@example.com");
+        service.update(2, new UpdateEmployeeRequest("Employee", "new@example.com", null, null), "admin@example.com");
 
         verify(passwordResetTokenRepository).invalidateUnusedForUser(eq(2), any(OffsetDateTime.class));
         verify(invitationRepository).invalidateUnusedForUser(2);
         verify(sessionRepository).revokeAllForUser(2);
         verify(invitationRepository).create(any(UUID.class), eq(2), eq("new-token-hash"), any(OffsetDateTime.class));
+    }
+
+    @Test
+    @DisplayName("Should revoke sessions when employee role changes")
+    void shouldRevokeSessionsWhenEmployeeRoleChanges() {
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
+        AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
+        AppUser employee = user(2, "employee@example.com", "OPERATOR", true);
+        employee.getEmployee().setCpf("12345678901");
+        employee.getEmployee().getRole().setId(3);
+
+        EmployeeRole nextRole = new EmployeeRole();
+        nextRole.setId(4);
+        nextRole.setName("MANAGER");
+        nextRole.setActive(true);
+
+        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(administrator.getEmail()))
+            .thenReturn(Optional.of(administrator));
+        when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(employee));
+        when(roleRepository.findByIdAndDeletedAtIsNull(4)).thenReturn(Optional.of(nextRole));
+
+        service.update(2, new UpdateEmployeeRequest("Employee", employee.getEmail(), null, 4), administrator.getEmail());
+
+        assertEquals("12345678901", employee.getEmployee().getCpf());
+        verify(employeeRepository, never()).existsByCpf(any());
+        verify(sessionRepository).revokeAllForUser(2);
+        verify(employeeRepository).saveAndFlush(employee.getEmployee());
+        verify(auditLogRepository).record(eq("employee"), eq("UPDATE"), eq("2"), eq(1), any(), any());
+    }
+
+    @Test
+    @DisplayName("Should preserve sessions when employee role and email remain unchanged")
+    void shouldPreserveSessionsWhenRoleAndEmailRemainUnchanged() {
+        EmployeeService service = new EmployeeService(appUserRepository, employeeRepository, roleRepository, storeRepository, activityRepository, invitationRepository, passwordResetTokenRepository, sessionRepository, auditLogRepository, emailService, passwordEncoder, tokenHashService, emailFailureService, entityManager);
+        AppUser administrator = user(1, "admin@example.com", "ADMINISTRATOR", true);
+        AppUser employee = user(2, "employee@example.com", "OPERATOR", true);
+        employee.getEmployee().setCpf("12345678901");
+        employee.getEmployee().getRole().setId(3);
+        employee.getEmployee().getRole().setActive(true);
+
+        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(administrator.getEmail()))
+            .thenReturn(Optional.of(administrator));
+        when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(employee));
+        when(roleRepository.findByIdAndDeletedAtIsNull(3)).thenReturn(Optional.of(employee.getEmployee().getRole()));
+
+        service.update(2, new UpdateEmployeeRequest("Employee", employee.getEmail(), null, 3), administrator.getEmail());
+
+        verify(sessionRepository, never()).revokeAllForUser(any());
     }
 
     @Test
@@ -184,10 +231,8 @@ class EmployeeServiceTest {
         when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(manager.getEmail()))
                 .thenReturn(Optional.of(manager));
         when(appUserRepository.findByEmployeeId(2)).thenReturn(Optional.of(employee));
-
-        assertThrows(ResourceNotFoundException.class, () -> service.update(2,
-                new UpdateEmployeeRequest("Employee", "12345678901", "employee@example.com", null, null),
-                manager.getEmail()));
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.update(2, new UpdateEmployeeRequest("Employee", "employee@example.com", null, null), manager.getEmail()));
 
         verify(appUserRepository, never()).findByIdWithWriteLock(any());
         verify(employeeRepository, never()).save(any());

@@ -101,16 +101,12 @@ class EmployeeControllerTest {
     @DisplayName("Should update employee data by id")
     void shouldUpdateEmployee() throws Exception {
         when(employeeService.update(eq(2), any(), eq("admin@example.com"))).thenReturn(employee());
-
-        mockMvc.perform(put("/api/v1/employees/2")
-                        .principal(principal())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"Employee","cpf":"12345678901","email":"employee@example.com"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("employee@example.com"));
-
+        mockMvc.perform(
+                put("/api/v1/employees/2").principal(principal()).contentType(MediaType.APPLICATION_JSON).content("""
+                        {"name":"Employee","email":"employee@example.com"}
+                        """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.email").value("employee@example.com"));
         verify(employeeService).update(eq(2), any(), eq("admin@example.com"));
     }
 
