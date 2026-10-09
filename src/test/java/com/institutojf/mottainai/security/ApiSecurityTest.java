@@ -1,10 +1,13 @@
 package com.institutojf.mottainai.security;
 
+import com.institutojf.mottainai.controller.EmployeeController;
 import com.institutojf.mottainai.repository.AppUserRepository;
 import com.institutojf.mottainai.repository.CustomerAuthRepository;
+import com.institutojf.mottainai.service.EmployeeService;
 import com.institutojf.mottainai.service.RlsContextService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -12,7 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,16 +22,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(ApiSecurityTest.SecurityTestController.class)
+@WebMvcTest({ ApiSecurityTest.SecurityTestController.class, EmployeeController.class })
 @Import({ SecurityConfig.class, DatabaseUserDetailsService.class, ApiSecurityTest.SecurityTestController.class })
 @TestPropertySource(properties = { "security.jwt.secret=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
         "security.jwt.issuer=https://mottainai.local", "security.jwt.expiration-minutes=60",
@@ -38,6 +46,12 @@ class ApiSecurityTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private EmployeeController employeeController;
+
+    @MockitoBean
+    private EmployeeService employeeService;
 
     @MockitoBean
     private AppUserRepository appUserRepository;
@@ -93,6 +107,28 @@ class ApiSecurityTest {
     @DisplayName("Should reject customer access to a staff endpoint")
     void shouldRejectCustomerFromStaffEndpoint() throws Exception {
         mockMvc.perform(get("/api/v1/security-probe").with(user("customer@mottainai.com").roles("CUSTOMER"))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Should proxy the secured employee controller with CGLIB")
+    void shouldProxyEmployeeControllerWithCglib() {
+        assertTrue(AopUtils.isCglibProxy(employeeController));
+    }
+
+    @Test
+    @DisplayName("Should enforce administrator authorization on the employee controller")
+    void shouldRejectManagerFromAdministratorMethod() throws Exception {
+        mockMvc.perform(get("/api/v1/employees-company").with(user("manager@mottainai.com").roles("MANAGER"))).andExpect(status().isForbidden());
+        verifyNoInteractions(employeeService);
+    }
+
+    @Test
+    @DisplayName("Should allow administrator access through the employee controller proxy")
+    void shouldAllowAdministratorThroughEmployeeControllerProxy() throws Exception {
+        when(employeeService.listCompany("admin@mottainai.com")).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/employees-company").with(user("admin@mottainai.com").roles("ADMINISTRATOR"))).andExpect(status().isOk());
+        verify(employeeService).listCompany("admin@mottainai.com");
     }
 
     @RestController
