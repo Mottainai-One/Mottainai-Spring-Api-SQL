@@ -5,5 +5,6 @@ public enum PromotionStatus {
     PENDING_APPROVAL,
     APPROVED,
     REJECTED,
+    CANCELLED,
     EXPIRED
 }

@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -20,6 +21,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "promotion_item")
 public class PromotionItem {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "promotion_item_id")
@@ -44,4 +46,5 @@ public class PromotionItem {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
 }

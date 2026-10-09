@@ -1,4 +1,3 @@
-
 package com.institutojf.mottainai.repository;
 
 import com.institutojf.mottainai.model.Alert;
@@ -11,7 +10,8 @@ import java.util.List;
 @Repository
 public interface AlertRepository extends JpaRepository<Alert, Integer> {
 
-    List<Alert> findByStore_StoreIdOrderByGeneratedAtDesc(Integer storeId);
+    List<Alert> findByStore_IdOrderByGeneratedAtDesc(Integer storeId);
 
-    long countByStore_StoreIdAndStatus(Integer storeId, AlertStatus status);
+    long countByStore_IdAndStatus(Integer storeId, AlertStatus status);
+
 }
