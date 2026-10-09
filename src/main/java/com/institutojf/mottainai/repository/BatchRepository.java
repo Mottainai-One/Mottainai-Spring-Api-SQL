@@ -10,7 +10,10 @@ public interface BatchRepository extends JpaRepository<Batch, Integer> {
 
     Optional<Batch> findByIdAndActiveTrueAndDeletedAtIsNull(Integer id);
 
+    Optional<Batch> findByIdAndDeletedAtIsNull(Integer id);
+
     boolean existsByBatchCode(String batchCode);
 
     List<Batch> findAllByActiveTrueAndDeletedAtIsNull();
+
 }
