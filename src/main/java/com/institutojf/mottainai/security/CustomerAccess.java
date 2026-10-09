@@ -6,6 +6,7 @@ import com.institutojf.mottainai.model.CustomerAuth;
 import com.institutojf.mottainai.repository.CustomerAuthRepository;
 import com.institutojf.mottainai.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,19 @@ public class CustomerAccess {
     private final CustomerRepository customerRepository;
 
     private final CustomerAuthRepository customerAuthRepository;
+
+    public void checkAccess(Authentication authentication, Integer customerId) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AccessDeniedException("Customer cannot access this record");
+        }
+        boolean staff = authentication.getAuthorities()
+            .stream()
+            .anyMatch(authority -> "ROLE_ADMINISTRATOR".equals(authority.getAuthority())
+                    || "ROLE_MANAGER".equals(authority.getAuthority()));
+        if (!staff && !canAccess(authentication, customerId)) {
+            throw new AccessDeniedException("Customer cannot access this record");
+        }
+    }
 
     public Customer currentCustomer(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated() || authentication.getName() == null) {

@@ -15,7 +15,6 @@ import com.institutojf.mottainai.service.LoyaltyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -62,7 +61,7 @@ public class CustomerController implements CustomerControllerApi {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR','MANAGER','CUSTOMER')")
     public CustomerResponse find(@PathVariable Integer id, Authentication authentication) {
-        authorizeCustomer(id, authentication);
+        customerAccess.checkAccess(authentication, id);
         return customerService.find(id);
     }
 
@@ -70,7 +69,7 @@ public class CustomerController implements CustomerControllerApi {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR','MANAGER','CUSTOMER')")
     public CustomerResponse update(@PathVariable Integer id, @Valid @RequestBody UpdateCustomerRequest request, Authentication authentication) {
-        authorizeCustomer(id, authentication);
+        customerAccess.checkAccess(authentication, id);
         return customerService.update(id, request);
     }
 
@@ -87,7 +86,7 @@ public class CustomerController implements CustomerControllerApi {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAnyRole('ADMINISTRATOR','MANAGER','CUSTOMER')")
     public void anonymize(@PathVariable Integer id, Authentication authentication) {
-        authorizeCustomer(id, authentication);
+        customerAccess.checkAccess(authentication, id);
         customerService.anonymize(id);
     }
 
@@ -95,7 +94,7 @@ public class CustomerController implements CustomerControllerApi {
     @GetMapping("/{id}/geofences")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR','MANAGER','CUSTOMER')")
     public List<CustomerGeofenceResponse> geofences(@PathVariable Integer id, Authentication authentication) {
-        authorizeCustomer(id, authentication);
+        customerAccess.checkAccess(authentication, id);
         return customerService.geofences(id);
     }
 
@@ -104,7 +103,7 @@ public class CustomerController implements CustomerControllerApi {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('CUSTOMER')")
     public CustomerGeofenceResponse addGeofence(@PathVariable Integer id, @Valid @RequestBody CreateCustomerGeofenceRequest request, Authentication authentication) {
-        authorizeCustomer(id, authentication);
+        customerAccess.checkAccess(authentication, id);
         return customerService.addGeofence(id, request);
     }
 
@@ -113,7 +112,7 @@ public class CustomerController implements CustomerControllerApi {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('CUSTOMER')")
     public void removeGeofence(@PathVariable Integer id, @PathVariable Integer geofenceId, Authentication authentication) {
-        authorizeCustomer(id, authentication);
+        customerAccess.checkAccess(authentication, id);
         customerService.removeGeofence(id, geofenceId);
     }
 
@@ -121,7 +120,7 @@ public class CustomerController implements CustomerControllerApi {
     @PatchMapping("/{id}/loyalty/status")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR','MANAGER','CUSTOMER')")
     public LoyaltyAccountResponse updateLoyaltyStatus(@PathVariable Integer id, @Valid @RequestBody UpdateLoyaltyStatusRequest request, Authentication authentication) {
-        authorizeCustomer(id, authentication);
+        customerAccess.checkAccess(authentication, id);
         return customerService.updateLoyaltyStatus(id, request);
     }
 
@@ -129,7 +128,7 @@ public class CustomerController implements CustomerControllerApi {
     @GetMapping("/{id}/loyalty")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR','MANAGER','CUSTOMER')")
     public LoyaltyAccountResponse loyalty(@PathVariable Integer id, Authentication authentication) {
-        authorizeCustomer(id, authentication);
+        customerAccess.checkAccess(authentication, id);
         return loyaltyService.getLoyaltyAccount(id);
     }
 
@@ -137,18 +136,8 @@ public class CustomerController implements CustomerControllerApi {
     @GetMapping("/{id}/loyalty/transactions")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR','MANAGER','CUSTOMER')")
     public List<LoyaltyTransactionResponse> loyaltyTransactions(@PathVariable Integer id, @RequestParam LocalDateTime from, @RequestParam LocalDateTime to, Authentication authentication) {
-        authorizeCustomer(id, authentication);
+        customerAccess.checkAccess(authentication, id);
         return loyaltyService.getTransactions(id, from, to);
-    }
-
-    private void authorizeCustomer(Integer id, Authentication authentication) {
-        boolean staff = authentication.getAuthorities()
-            .stream()
-            .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMINISTRATOR")
-                    || authority.getAuthority().equals("ROLE_MANAGER"));
-        if (!staff && !customerAccess.canAccess(authentication, id)) {
-            throw new AccessDeniedException("Customer cannot access this record");
-        }
     }
 
 }

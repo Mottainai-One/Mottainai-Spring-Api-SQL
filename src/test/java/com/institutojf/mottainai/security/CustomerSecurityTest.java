@@ -1,7 +1,7 @@
 package com.institutojf.mottainai.security;
 
-import com.institutojf.mottainai.controller.CustomerController;
 import com.institutojf.mottainai.controller.CustomerAuthenticationController;
+import com.institutojf.mottainai.controller.CustomerController;
 import com.institutojf.mottainai.controller.CustomerProfileController;
 import com.institutojf.mottainai.dto.response.CustomerResponse;
 import com.institutojf.mottainai.dto.response.CustomerTokenResponse;
@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -25,11 +26,12 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -85,11 +87,11 @@ class CustomerSecurityTest {
     @Test
     @DisplayName("Should permit customer to read own record")
     void permitsCustomerToReadOwnRecord() throws Exception {
-        when(customerAccess.canAccess(any(), eq(7))).thenReturn(true);
         when(customerService.find(7)).thenReturn(new CustomerResponse(7, "Ana", "***.456.789-**", "ana@example.com",
                 null, null, true, false, null, null, null));
         mockMvc.perform(get("/api/v1/customers/7").with(user("ana@example.com").roles("CUSTOMER")))
             .andExpect(status().isOk());
+        verify(customerAccess).checkAccess(any(), eq(7));
     }
 
     @Test
@@ -98,6 +100,15 @@ class CustomerSecurityTest {
         when(customerService.findAll()).thenReturn(List.of());
         mockMvc.perform(get("/api/v1/customers").with(user("admin@example.com").roles("ADMINISTRATOR")))
             .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Should reject customer access to another record before invoking the service")
+    void rejectsCustomerAccessToAnotherRecord() throws Exception {
+        doThrow(new AccessDeniedException("Customer cannot access this record")).when(customerAccess).checkAccess(any(), eq(8));
+
+        mockMvc.perform(get("/api/v1/customers/8").with(user("ana@example.com").roles("CUSTOMER"))).andExpect(status().isForbidden());
+        verifyNoInteractions(customerService);
     }
 
     @Test
