@@ -25,44 +25,44 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 public class SystemRuleService {
+
     private final SystemRuleRepository systemRuleRepository;
+
     private final AppUserRepository appUserRepository;
+
     private final AuditLogRepository auditLogRepository;
+
     private final JsonMapper jsonMapper;
 
     @Transactional(readOnly = true)
     public List<SystemRuleResponse> findAll() {
-        return systemRuleRepository.findAllByOrderByCategoryAscKeyAsc().stream()
-                .map(this::toResponse)
-                .toList();
+        return systemRuleRepository.findAllByOrderByCategoryAscKeyAsc().stream().map(this::toResponse).toList();
     }
 
     @Transactional
     public SystemRuleResponse update(String key, String category, UpdateSystemRuleRequest request, String actorEmail) {
-        List<SystemRule> matchingRules = systemRuleRepository.findAllByKey(key).stream()
-                .filter(rule -> category == null || rule.getCategory().equalsIgnoreCase(category))
-                .toList();
+        List<SystemRule> matchingRules = systemRuleRepository.findAllByKey(key)
+            .stream()
+            .filter(rule -> category == null || rule.getCategory().equalsIgnoreCase(category))
+            .toList();
         if (matchingRules.isEmpty()) {
             throw new ResourceNotFoundException("System rule not found");
         }
         if (matchingRules.size() > 1) {
             throw new ConflictException("Rule key exists in multiple categories; provide the category");
         }
-
         SystemRule rule = matchingRules.getFirst();
         validateValue(rule.getValueType(), request.ruleValue());
         AppUser actor = appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(actorEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
-
+            .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
         String oldValue = rule.getValue();
         rule.setValue(request.ruleValue());
         rule.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
         rule = systemRuleRepository.save(rule);
-
         RuleValueAudit oldData = new RuleValueAudit(rule.getKey(), rule.getCategory(), rule.getValueType(), oldValue);
-        RuleValueAudit newData = new RuleValueAudit(rule.getKey(), rule.getCategory(), rule.getValueType(), rule.getValue());
+        RuleValueAudit newData = new RuleValueAudit(rule.getKey(), rule.getCategory(), rule.getValueType(),
+                rule.getValue());
         auditLogRepository.record("system_rule", "UPDATE", rule.getId().toString(), actor.getId(), oldData, newData);
-
         return toResponse(rule);
     }
 
@@ -76,20 +76,22 @@ public class SystemRuleService {
                     }
                 }
                 case "JSON" -> jsonMapper.readTree(value);
-                case "TEXT" -> { }
+                case "TEXT" -> {
+                }
                 default -> throw new BusinessException("Unsupported system rule value type");
             }
-        } catch (NumberFormatException | JacksonException exception) {
+        }
+        catch (NumberFormatException | JacksonException exception) {
             throw new BusinessException("Rule value does not match its configured value type");
         }
     }
 
     private SystemRuleResponse toResponse(SystemRule rule) {
-        return new SystemRuleResponse(rule.getId(), rule.getCategory(), rule.getKey(), rule.getName(),
-                rule.getValue(), rule.getValueType(), rule.getDescription(), rule.getActive(),
-                rule.getCreatedAt(), rule.getUpdatedAt());
+        return new SystemRuleResponse(rule.getId(), rule.getCategory(), rule.getKey(), rule.getName(), rule.getValue(),
+                rule.getValueType(), rule.getDescription(), rule.getActive(), rule.getCreatedAt(), rule.getUpdatedAt());
     }
 
     private record RuleValueAudit(String key, String category, String valueType, String ruleValue) {
     }
+
 }
