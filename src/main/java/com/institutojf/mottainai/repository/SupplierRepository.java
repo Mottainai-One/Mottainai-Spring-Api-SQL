@@ -23,8 +23,9 @@ public interface SupplierRepository extends JpaRepository<Supplier, Integer> {
     Page<Supplier> findAllByActiveTrueAndDeletedAtIsNull(Pageable pageable);
 
     /**
-     * Verifica se o CNPJ já foi cadastrado.
-     * A consulta considera inclusive fornecedores inativos, pois o banco exige CNPJ único globalmente.
+     * Verifica se o CNPJ já foi cadastrado. A consulta considera inclusive fornecedores
+     * inativos, pois o banco exige CNPJ único globalmente.
      */
     boolean existsByCnpj(String cnpj);
+
 }

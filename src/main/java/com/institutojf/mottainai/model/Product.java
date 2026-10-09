@@ -85,4 +85,5 @@ public class Product {
     @Version
     @Column(nullable = false)
     private Integer version = 1;
+
 }
