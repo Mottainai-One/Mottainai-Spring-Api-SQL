@@ -57,4 +57,5 @@ public class SubscriptionPlan {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
 }
