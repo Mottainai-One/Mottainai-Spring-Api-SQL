@@ -84,6 +84,13 @@ public class EmployeeController implements EmployeeControllerApi {
     }
 
     @Override
+    @PostMapping("/employees/{id}/invite")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public ResponseEntity<EmployeeResponse> resendInvitation(@PathVariable Integer id, Authentication authentication) {
+        return ResponseEntity.ok(employeeService.resendInvitation(id, authentication.getName()));
+    }
+
+    @Override
     @GetMapping("/employees/{id}/shifts")
     public ResponseEntity<List<EmployeeShiftResponse>> shifts(@PathVariable Integer id, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to, Authentication authentication) {
         return ResponseEntity.ok(employeeService.shifts(id, from, to, authentication.getName()));
@@ -94,4 +101,5 @@ public class EmployeeController implements EmployeeControllerApi {
     public ResponseEntity<List<EmployeeCancelRequestResponse>> cancelRequests(@PathVariable Integer id, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to, Authentication authentication) {
         return ResponseEntity.ok(employeeService.cancelRequests(id, from, to, authentication.getName()));
     }
+
 }
