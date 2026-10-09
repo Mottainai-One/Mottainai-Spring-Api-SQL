@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class TaxProfileController implements TaxProfileControllerApi {
+
     private final TaxProfileService taxProfileService;
 
     @Override
@@ -44,7 +45,7 @@ public class TaxProfileController implements TaxProfileControllerApi {
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<TaxProfileResponse> create(@Valid @RequestBody TaxProfileRequest request, Authentication authentication) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(taxProfileService.create(request, authentication.getName()));
+            .body(taxProfileService.create(request, authentication.getName()));
     }
 
     @Override
@@ -57,8 +58,9 @@ public class TaxProfileController implements TaxProfileControllerApi {
     @Override
     @DeleteMapping("/tax-profiles/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id, Authentication authentication) {
-        taxProfileService.deactivate(id, authentication.getName());
+    public ResponseEntity<Void> delete(@PathVariable Integer id, Authentication authentication) {
+        taxProfileService.delete(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
+
 }

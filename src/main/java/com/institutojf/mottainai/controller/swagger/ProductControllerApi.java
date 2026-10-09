@@ -2,7 +2,17 @@ package com.institutojf.mottainai.controller.swagger;
 
 import com.institutojf.mottainai.dto.request.CreateProductRequest;
 import com.institutojf.mottainai.dto.request.UpdateProductRequest;
+import com.institutojf.mottainai.dto.request.UpdateActiveStatusRequest;
 import com.institutojf.mottainai.dto.response.ProductResponse;
+import com.institutojf.mottainai.dto.request.BatchStorePriceRequest;
+import com.institutojf.mottainai.dto.request.LinkSupplierToProductRequest;
+import com.institutojf.mottainai.dto.request.UpdateStorePriceRequest;
+import com.institutojf.mottainai.dto.request.UpdateSupplierProductRequest;
+import com.institutojf.mottainai.dto.response.ProductHistoryResponse;
+import com.institutojf.mottainai.dto.response.ProductPriceHistoryResponse;
+import com.institutojf.mottainai.dto.response.StoreProductPriceResponse;
+import com.institutojf.mottainai.dto.response.SupplierProductResponse;
+import com.institutojf.mottainai.dto.response.SupplierResponse;
 import com.institutojf.mottainai.handler.ApiError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,6 +23,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Tag(name = "Products", description = "API for managing products")
 public interface ProductControllerApi {
@@ -55,11 +69,78 @@ public interface ProductControllerApi {
     })
     ResponseEntity<ProductResponse> update(Integer id, UpdateProductRequest request);
 
-    @Operation(summary = "Deactivate a product")
+    @Operation(summary = "Change product active status")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Product deactivated"),
-            @ApiResponse(responseCode = "400", description = "Product cannot be deactivated", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<ProductResponse> updateStatus(Integer id, UpdateActiveStatusRequest request);
+
+    @Operation(summary = "Logically delete a product")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Product logically deleted"),
+            @ApiResponse(responseCode = "400", description = "Product cannot be logically deleted", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<Void> deactivate(Integer id);
+    ResponseEntity<Void> delete(Integer id, Authentication authentication);
+
+    @Operation(summary = "List active store prices for a product")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<List<StoreProductPriceResponse>> findStorePrices(Integer id);
+
+    @Operation(summary = "Set a product price at a store")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<StoreProductPriceResponse> updateStorePrice(Integer id, Integer storeId, UpdateStorePriceRequest request, Authentication authentication);
+
+    @Operation(summary = "Update multiple store prices atomically")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<List<StoreProductPriceResponse>> updatePrices(BatchStorePriceRequest request, Authentication authentication);
+
+    @Operation(summary = "List suppliers")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<Page<SupplierResponse>> findSuppliers(Pageable pageable);
+
+    @Operation(summary = "List suppliers linked to a product")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<Page<SupplierProductResponse>> findSuppliersByProduct(Integer id, Pageable pageable);
+
+    @Operation(summary = "Link a supplier to a product")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<SupplierProductResponse> linkSupplier(Integer id, LinkSupplierToProductRequest request, Authentication authentication);
+
+    @Operation(summary = "Update supplier terms for a product")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<SupplierProductResponse> updateSupplierLink(Integer id, Integer supplierId, UpdateSupplierProductRequest request, Authentication authentication);
+
+    @Operation(summary = "Deactivate a supplier-product link")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<Void> deactivateSupplierLink(Integer id, Integer supplierId, Authentication authentication);
+
+    @Operation(summary = "List product master-data history")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<List<ProductHistoryResponse>> findMasterHistory(Integer id, LocalDateTime from, LocalDateTime to);
+
+    @Operation(summary = "List product price history")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successful response")
+    })
+    ResponseEntity<List<ProductPriceHistoryResponse>> findPriceHistory(Integer id, LocalDateTime from, LocalDateTime to);
+
 }

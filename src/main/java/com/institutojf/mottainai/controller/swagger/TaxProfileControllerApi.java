@@ -46,11 +46,12 @@ public interface TaxProfileControllerApi {
     })
     ResponseEntity<TaxProfileResponse> update(Integer id, TaxProfileRequest request, Authentication authentication);
 
-    @Operation(summary = "Deactivate a tax profile")
+    @Operation(summary = "Logically delete a tax profile")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Tax profile deactivated"),
+            @ApiResponse(responseCode = "204", description = "Tax profile logically deleted"),
             @ApiResponse(responseCode = "400", description = "Tax profile is used by active products", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Tax profile not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    ResponseEntity<Void> deactivate(Integer id, Authentication authentication);
+    ResponseEntity<Void> delete(Integer id, Authentication authentication);
+
 }

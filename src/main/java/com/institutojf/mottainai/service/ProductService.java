@@ -7,11 +7,14 @@ import com.institutojf.mottainai.exception.BusinessException;
 import com.institutojf.mottainai.exception.ConflictException;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import com.institutojf.mottainai.mapper.ProductMapper;
+import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.model.Product;
 import com.institutojf.mottainai.model.ProductCategory;
 import com.institutojf.mottainai.model.TaxProfile;
 import com.institutojf.mottainai.repository.ProductCategoryRepository;
 import com.institutojf.mottainai.repository.ProductRepository;
+import com.institutojf.mottainai.repository.AppUserRepository;
+import com.institutojf.mottainai.repository.AuditLogRepository;
 import com.institutojf.mottainai.repository.SupplierProductRepository;
 import com.institutojf.mottainai.repository.TaxProfileRepository;
 import jakarta.persistence.EntityManager;
@@ -23,32 +26,38 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Objects;
+import java.time.LocalDateTime;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class ProductService {
 
     private final ProductRepository productRepository;
+
     private final ProductCategoryRepository categoryRepository;
+
     private final TaxProfileRepository taxProfileRepository;
+
     private final SupplierProductRepository supplierProductRepository;
+
     private final ProductMapper productMapper;
+
     private final EntityManager entityManager;
+
+    private final AppUserRepository appUserRepository;
+
+    private final AuditLogRepository auditLogRepository;
 
     @Transactional
     public ProductResponse create(CreateProductRequest request) {
         if (productRepository.existsByBarcode(request.barcode())) {
             throw new ConflictException("Product barcode already exists");
         }
-
         Product product = new Product();
         product.setBarcode(request.barcode());
         product.setActive(true);
-        applyProductFields(
-                request.categoryId(), request.taxProfileId(), request.ncm(), request.cest(), request.name(), request.description(), request.brand(),
-                request.unitMeasure(), request.weight(), product
-        );
-
+        applyProductFields(request.categoryId(), request.taxProfileId(), request.ncm(), request.cest(), request.name(), request.description(), request.brand(), request.unitMeasure(), request.weight(), product);
         Product savedProduct = productRepository.saveAndFlush(product);
         entityManager.refresh(savedProduct);
         return productMapper.toResponse(savedProduct);
@@ -67,7 +76,7 @@ public class ProductService {
     @Transactional(readOnly = true)
     public ProductResponse findByBarcode(String barcode) {
         Product product = productRepository.findByBarcodeAndActiveTrueAndDeletedAtIsNull(barcode)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         return productMapper.toResponse(product);
     }
 
@@ -80,21 +89,32 @@ public class ProductService {
         if (Boolean.FALSE.equals(request.active())) {
             ensureCanDeactivate(id);
         }
-        applyProductFields(
-                request.categoryId(), request.taxProfileId(), request.ncm(), request.cest(), request.name(), request.description(), request.brand(),
-                request.unitMeasure(), request.weight(), product
-        );
+        applyProductFields(request.categoryId(), request.taxProfileId(), request.ncm(), request.cest(), request.name(), request.description(), request.brand(), request.unitMeasure(), request.weight(), product);
         product.setActive(request.active());
-
         return productMapper.toResponse(productRepository.save(product));
     }
 
     @Transactional
-    public void deactivate(Integer id) {
+    public ProductResponse updateStatus(Integer id, Boolean active) {
+        Product product = findProductById(id);
+        if (Boolean.FALSE.equals(active)) {
+            ensureCanDeactivate(id);
+        }
+        product.setActive(active);
+        return productMapper.toResponse(productRepository.save(product));
+    }
+
+    @Transactional
+    public void delete(Integer id, String actorEmail) {
         Product product = findActiveProductById(id);
         ensureCanDeactivate(id);
+        AppUser actor = appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull(actorEmail)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         product.setActive(false);
+        product.setDeletedAt(LocalDateTime.now());
         productRepository.save(product);
+        auditLogRepository.record("product", "DELETE", id.toString(), actor.getId(), Map.of("active", true),
+                Map.of("active", false, "deleted_at", product.getDeletedAt().toString()));
     }
 
     private void ensureCanDeactivate(Integer id) {
@@ -105,20 +125,19 @@ public class ProductService {
 
     private Product findActiveProductById(Integer id) {
         return productRepository.findByIdAndActiveTrueAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
     }
 
     private Product findProductById(Integer id) {
         return productRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
     }
 
     private void applyProductFields(Integer categoryId, Integer taxProfileId, String ncm, String cest, String name, String description, String brand, String unitMeasure, BigDecimal weight, Product product) {
         ProductCategory category = categoryRepository.findByIdAndActiveTrueAndDeletedAtIsNull(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product category not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Product category not found"));
         TaxProfile taxProfile = taxProfileRepository.findByIdAndActiveTrueAndDeletedAtIsNull(taxProfileId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tax profile not found"));
-
+            .orElseThrow(() -> new ResourceNotFoundException("Tax profile not found"));
         product.setCategory(category);
         product.setTaxProfile(taxProfile);
         product.setNcm(ncm);
@@ -129,4 +148,5 @@ public class ProductService {
         product.setUnitMeasure(unitMeasure);
         product.setWeight(weight);
     }
+
 }

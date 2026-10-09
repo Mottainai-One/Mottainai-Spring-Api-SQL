@@ -16,12 +16,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class ProductCategoryService {
 
     private final ProductCategoryRepository categoryRepository;
+
     private final ProductRepository productRepository;
+
     private final ProductCategoryMapper categoryMapper;
 
     @Transactional
@@ -30,12 +34,10 @@ public class ProductCategoryService {
         if (categoryRepository.existsByNameIgnoreCase(name)) {
             throw new ConflictException("Product category name already exists");
         }
-
         ProductCategory category = new ProductCategory();
         category.setName(name);
         category.setDescription(request.description());
         category.setActive(true);
-
         return categoryMapper.toResponse(categoryRepository.save(category));
     }
 
@@ -53,29 +55,26 @@ public class ProductCategoryService {
     public ProductCategoryResponse update(Integer id, UpdateProductCategoryRequest request) {
         ProductCategory category = findCategoryById(id);
         String name = request.name().trim();
-
         categoryRepository.findByNameIgnoreCase(name)
-                .filter(foundCategory -> !foundCategory.getId().equals(id))
-                .ifPresent(foundCategory -> {
-                    throw new ConflictException("Product category name already exists");
-                });
-
+            .filter(foundCategory -> !foundCategory.getId().equals(id))
+            .ifPresent(foundCategory -> {
+                throw new ConflictException("Product category name already exists");
+            });
         if (Boolean.FALSE.equals(request.active())) {
             ensureCanDeactivate(id);
         }
-
         category.setName(name);
         category.setDescription(request.description());
         category.setActive(request.active());
-
         return categoryMapper.toResponse(categoryRepository.save(category));
     }
 
     @Transactional
-    public void deactivate(Integer id) {
+    public void delete(Integer id) {
         ProductCategory category = findActiveCategoryById(id);
         ensureCanDeactivate(id);
         category.setActive(false);
+        category.setDeletedAt(LocalDateTime.now());
         categoryRepository.save(category);
     }
 
@@ -87,11 +86,12 @@ public class ProductCategoryService {
 
     private ProductCategory findActiveCategoryById(Integer id) {
         return categoryRepository.findByIdAndActiveTrueAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product category not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Product category not found"));
     }
 
     private ProductCategory findCategoryById(Integer id) {
         return categoryRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product category not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Product category not found"));
     }
+
 }
