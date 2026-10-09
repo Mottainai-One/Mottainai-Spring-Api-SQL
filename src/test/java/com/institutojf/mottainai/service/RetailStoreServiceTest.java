@@ -1,17 +1,21 @@
 package com.institutojf.mottainai.service;
 
 import com.institutojf.mottainai.dto.request.CreateRetailStoreRequest;
+import com.institutojf.mottainai.dto.request.CreateAddressRequest;
+import com.institutojf.mottainai.dto.request.UpdateAddressRequest;
 import com.institutojf.mottainai.dto.request.UpdateRetailStoreRequest;
 import com.institutojf.mottainai.exception.BusinessException;
 import com.institutojf.mottainai.exception.ConflictException;
 import com.institutojf.mottainai.exception.ResourceNotFoundException;
 import com.institutojf.mottainai.mapper.RetailStoreMapper;
 import com.institutojf.mottainai.model.Address;
+import com.institutojf.mottainai.model.AppUser;
 import com.institutojf.mottainai.model.Company;
 import com.institutojf.mottainai.model.RetailStore;
 import com.institutojf.mottainai.model.SubscriptionPlan;
-import com.institutojf.mottainai.repository.AddressRepository;
 import com.institutojf.mottainai.repository.CompanyRepository;
+import com.institutojf.mottainai.repository.AppUserRepository;
+import com.institutojf.mottainai.repository.AuditLogRepository;
 import com.institutojf.mottainai.repository.RetailStoreRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,9 +29,10 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,7 +47,13 @@ class RetailStoreServiceTest {
     private CompanyRepository companyRepository;
 
     @Mock
-    private AddressRepository addressRepository;
+    private AddressService addressService;
+
+    @Mock
+    private AppUserRepository appUserRepository;
+
+    @Mock
+    private AuditLogRepository auditLogRepository;
 
     @Mock
     private RetailStoreMapper retailStoreMapper;
@@ -56,11 +67,9 @@ class RetailStoreServiceTest {
         when(retailStoreRepository.existsByCnpj("11222333000181")).thenReturn(false);
         when(companyRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(company(true)));
         when(retailStoreRepository.countByCompany_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(1L);
-        when(addressRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(address()));
+        when(addressService.createAddress(any())).thenReturn(address());
         when(retailStoreRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
         retailStoreService.create(createRequest());
-
         verify(retailStoreRepository).save(any());
     }
 
@@ -68,9 +77,7 @@ class RetailStoreServiceTest {
     @DisplayName("Should reject store when CNPJ already exists")
     void shouldRejectStoreWhenCnpjAlreadyExists() {
         when(retailStoreRepository.existsByCnpj("11222333000181")).thenReturn(true);
-
         assertThrows(ConflictException.class, () -> retailStoreService.create(createRequest()));
-
         verify(retailStoreRepository, never()).save(any());
     }
 
@@ -80,9 +87,7 @@ class RetailStoreServiceTest {
         when(retailStoreRepository.existsByCnpj("11222333000181")).thenReturn(false);
         when(companyRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(company(true)));
         when(retailStoreRepository.countByCompany_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(2L);
-
         assertThrows(BusinessException.class, () -> retailStoreService.create(createRequest()));
-
         verify(retailStoreRepository, never()).save(any());
     }
 
@@ -92,10 +97,8 @@ class RetailStoreServiceTest {
         when(retailStoreRepository.existsByCnpj("11222333000181")).thenReturn(false);
         when(companyRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(company(true)));
         when(retailStoreRepository.countByCompany_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(0L);
-        when(addressRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.empty());
-
+        when(addressService.createAddress(any())).thenThrow(new ResourceNotFoundException("Address not found"));
         assertThrows(ResourceNotFoundException.class, () -> retailStoreService.create(createRequest()));
-
         verify(retailStoreRepository, never()).save(any());
     }
 
@@ -104,9 +107,7 @@ class RetailStoreServiceTest {
     void shouldRejectStoreReactivationWhenThePlanStoreLimitIsReached() {
         when(retailStoreRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(store(false)));
         when(retailStoreRepository.countByCompany_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(2L);
-
         assertThrows(BusinessException.class, () -> retailStoreService.update(1, updateRequest(true)));
-
         verify(retailStoreRepository, never()).save(any());
     }
 
@@ -115,35 +116,55 @@ class RetailStoreServiceTest {
     void shouldUpdateStoreFields() {
         RetailStore store = store(true);
         when(retailStoreRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(store));
-        when(addressRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(address()));
+        when(addressService.updateAddress(eq(1), any())).thenReturn(address());
         when(retailStoreRepository.save(store)).thenReturn(store);
-
         retailStoreService.update(1, updateRequest(true));
-
         assertEquals("Loja Centro", store.getName());
         assertEquals("loja@mottainai.com", store.getEmail());
         verify(retailStoreRepository).save(store);
     }
 
     @Test
-    @DisplayName("Should deactivate store without soft deleting it")
-    void shouldDeactivateStoreWithoutSoftDeletingIt() {
+    @DisplayName("Should soft delete store")
+    void shouldSoftDeleteStore() {
         RetailStore store = store(true);
+        AppUser actor = new AppUser();
+        actor.setId(9);
         when(retailStoreRepository.findByIdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(Optional.of(store));
-
-        retailStoreService.deactivate(1);
-
+        when(appUserRepository.findByEmailIgnoreCaseAndActiveTrueAndDeletedAtIsNull("admin@example.com")).thenReturn(Optional.of(actor));
+        retailStoreService.delete(1, "admin@example.com");
         assertFalse(store.getActive());
-        assertNull(store.getDeletedAt());
+        assertNotNull(store.getDeletedAt());
+        verify(retailStoreRepository).save(store);
+    }
+
+    @Test
+    @DisplayName("Should reactivate store through the status flow when the plan allows it")
+    void shouldReactivateStoreThroughTheStatusFlowWhenThePlanAllowsIt() {
+        RetailStore store = store(false);
+        when(retailStoreRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(store));
+        when(retailStoreRepository.countByCompany_IdAndActiveTrueAndDeletedAtIsNull(1)).thenReturn(1L);
+        when(retailStoreRepository.save(store)).thenReturn(store);
+        retailStoreService.updateStatus(1, true);
+        assertEquals(true, store.getActive());
         verify(retailStoreRepository).save(store);
     }
 
     private CreateRetailStoreRequest createRequest() {
-        return new CreateRetailStoreRequest(1, 1, "Loja Centro", "11222333000181", "loja@mottainai.com", "11999999999", null, null);
+        return new CreateRetailStoreRequest(1, createAddressRequest(), "Loja Centro", "11222333000181", "loja@mottainai.com", "11999999999",
+                null, null);
     }
 
     private UpdateRetailStoreRequest updateRequest(boolean active) {
-        return new UpdateRetailStoreRequest(1, "Loja Centro", "loja@mottainai.com", "11999999999", null, null, active);
+        return new UpdateRetailStoreRequest(updateAddressRequest(), "Loja Centro", "loja@mottainai.com", "11999999999", null, null, active);
+    }
+
+    private CreateAddressRequest createAddressRequest() {
+        return new CreateAddressRequest("05120060", "Rua Irineu José Bordon", "335", null, "Vila Jaguara", "São Paulo", "SP");
+    }
+
+    private UpdateAddressRequest updateAddressRequest() {
+        return new UpdateAddressRequest("05120060", "Rua Irineu José Bordon", "335", null, "Vila Jaguara", "São Paulo", "SP");
     }
 
     private SubscriptionPlan plan() {
@@ -189,4 +210,5 @@ class RetailStoreServiceTest {
         store.setActive(active);
         return store;
     }
+
 }
